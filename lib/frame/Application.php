@@ -2,12 +2,15 @@
 namespace pwframe\lib\frame;
 
 use Exception;
+use ReflectionClass;
 
 class Application {
     private $autoloadExtension = '.php';
     private $rootNamespace = 'pwframe\\';
     private $webDirectory = 'web';
+    private $configDirectory = 'config';
     private $appUri, $appUrl, $appPath, $rootPath;
+    private $applicationConfig, $webApplicationContext;
     
     public function __construct($appUri, $rootPath) {
         if(empty($appUri)) {
@@ -26,8 +29,19 @@ class Application {
     }
     
     private function init() {
+        date_default_timezone_set('Asia/Shanghai');
+        if(defined('DEBUG') && true === DEBUG) {
+            ini_set('display_errors', 'On');
+            error_reporting(E_ALL);
+        } else {
+            ini_set('display_errors', 'Off');
+            error_reporting(0);
+        }
         spl_autoload_extensions($this->autoloadExtension);
         spl_autoload_register(array($this, 'autoload'));
+        $this->applicationConfig = require_once $this->rootPath.$this->configDirectory.DIRECTORY_SEPARATOR.'application.config.php';
+        $this->webApplicationContext = WebApplicationContext::getInstance();
+        // $webApplicationContext setBean($this->applicationConfig);
     }
     
     public function autoload($className) {
@@ -44,7 +58,93 @@ class Application {
     }
     
     public function run() {
-        
+        $route = $this->parseRoute();
+        try {
+            if(null == $route) throw new Exception('uriError');
+            $this->processInvoke($route, null, 0);
+        } catch (Exception $e) {
+            $route = array(
+                'controller' => $this->applicationConfig['defaultErrorController'],
+                'action' => $this->applicationConfig['defaultErrorAction'],
+                'paramString' => ''
+            );
+            try {
+                $this->processInvoke($route, $e, 0);
+            } catch (Exception $e1) {
+                $this->proessError($route, $e1, 1);
+            }
+        }
+    }
+    
+    private function processInvoke($route, $e, $count) {
+        $controller = new ReflectionClass($this->rootNamespace
+            .$this->applicationConfig['controllerNamePath'].'\\'.$route['controller'].$this->applicationConfig['defaultControllerSuffix']);
+        $instance = $controller->newInstanceArgs();
+        $instance->setWebApplicationContext($this->webApplicationContext);
+        $instance->setAppUrl($this->appUrl);
+        $instance->setAppUri($this->appUri);
+        $instance->setAppPath($this->appPath);
+        $instance->setRootPath($this->rootPath);
+        $instance->setControllerName($route['controller']);
+        $instance->setActionName($route['action']);
+        $instance->setParams($_REQUEST);
+        $instance->setAssign(array());
+        $initVal = $instance->init();
+		if (null !== $initVal) {
+			$this->proessError($route, new Exception("initError"), $count);
+			return;
+		}
+		$action = $controller->getMethod($route['action'].$this->applicationConfig['defaultActionSuffix']);
+		if (null == $e) {
+		    $actionVal = $action->invoke($instance);
+		} else {
+		    $actionVal = $action->invoke($instance, $e);
+		}
+		$destroyVal = $instance->destroy($actionVal);
+		if (null != $destroyVal) {
+			$this->proessError($route, new Exception("destroyError"), $count);
+			return;
+		}
+    }
+    
+    private function proessError($route, $e, $count) {
+        if ($count > 0) {
+            throw new Exception('route:'.implode(',', $route), 0, $e);
+		}
+		$route = array(
+		    'controller' => $this->applicationConfig['defaultErrorController'],
+		    'action' => $this->applicationConfig['defaultErrorAction'],
+		    'paramString' => ''
+		);
+		try {
+			$this->processInvoke($route, $e, $count++);
+		} catch (Exception $e1) {
+			$this->proessError($route, new Exception("proessError"), $count++);
+		}
+    }
+    
+    private function parseRoute() {
+        $route = array(
+            'controller' => $this->applicationConfig['defaultControllerName'],
+            'action' => $this->applicationConfig['defaultActionName'],
+            'paramString' => ''
+        );
+        $uri = $_SERVER['REQUEST_URI'];
+        if(!preg_match('/^[\\/_a-zA-Z\\d\\-]*$/', $uri)) return null;
+        if('/' != substr($uri, -1)) $uri .= '/';
+        $length = strlen($this->appUri);
+        if(strlen($uri) < $length) return null;
+        $uri = trim(substr($uri, $length), '/');
+        if(empty($uri)) return $route;
+        $uriArray = explode('/', $uri);
+        $length = count($uriArray);
+        $route['controller'] = $uriArray[0];
+        if(1 == $length) return $route;
+        $route['action'] = $uriArray[1];
+        if(2 == $length) return $route;
+        if(empty($this->applicationConfig['allowPathParams'])) return null;
+        $route['paramString'] = implode('/', array_slice($uriArray, 2));
+        return $route;
     }
 }
 
