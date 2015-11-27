@@ -87,4 +87,35 @@ class ControllerBase {
     public function destroy($actionVal) {
         return $actionVal;
     }
+    
+    /**
+     * 设置视图中需要的参数
+     */
+    protected function assign($key, $value) {
+        $this->assign[$key] = $value;
+        return $this;
+    }
+    
+    protected function url($action = null, $controller = null) {
+        if(null == $controller) $controller = $this->controllerName;
+        if(null == $action) $action = $this->actionName;
+        return $this->appPath.$controller.'/'.$action.'/';
+    }
+    
+    protected function displayTemplate($action = null, $controller = null) {
+        if(null == $controller) $controller = $this->controllerName;
+        if(null == $action) $action = $this->actionName;
+        extract($this->assign);
+        include $this->rootPath.'application'.DIRECTORY_SEPARATOR
+            .'view'.DIRECTORY_SEPARATOR.$controller.DIRECTORY_SEPARATOR.$action.'.php';
+        return null;
+    }
+    
+    /**
+     * 重定向自定义URL地址
+     */
+    protected function redirect($url) {
+        header('Location:'.$url);
+        return null;
+    }
 }

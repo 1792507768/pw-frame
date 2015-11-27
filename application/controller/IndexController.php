@@ -5,6 +5,7 @@ use pwframe\lib\core\component\CoreController;
 
 class IndexController extends CoreController {
     public function indexAction() {
-        echo 'it works';
+        $this->assign('message', 'it works');
+        return $this->displayTemplate();
     }
 }
