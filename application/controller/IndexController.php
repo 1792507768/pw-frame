@@ -3,20 +3,18 @@ namespace pwframe\application\controller;
 
 use pwframe\lib\core\component\CoreController;
 use pwframe\application\service\DemoService;
+use pwframe\lib\frame\ioc\BeanPrototype;
 
-class IndexController extends CoreController {
+class IndexController extends CoreController implements BeanPrototype {
     
-    public $demoSerive;
+    public $demoSerivce;
     
-    public function diDefinition() {
-        return array(
-            'demoSerive' => DemoService::class
-        );
+    public function __construct(DemoService $demoService) {
+        $this->demoSerivce = $demoService;
     }
 
     public function indexAction() {
-        var_dump($this->demoSerive);
-        $this->assign('message', 'it works');
+        $this->assign('message', $this->demoSerivce->getMessage());
         return $this->displayTemplate();
     }
 }

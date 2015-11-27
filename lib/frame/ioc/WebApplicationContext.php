@@ -36,16 +36,34 @@ class WebApplicationContext {
         } catch (Exception $e) {
             return null;
         }
-        $instance = $class->newInstanceArgs(); // 暂不支持构造函数参数
-        if(!$class->implementsInterface(BeanBase::class)) return $instance;
-        $diArray = $instance->diDefinition();
-        foreach ($diArray as $diKey => $diValue) {
-            $instance->$diKey = $this->getBean($diValue);
+        if(!$class->implementsInterface(BeanBase::class)) {
+            return $class->newInstanceWithoutConstructor();
         }
+        $constructor = $class->getConstructor();
+        if(null == $constructor) {
+            $instance = $class->newInstanceWithoutConstructor();
+        } else {
+            $parameters = $constructor->getParameters();
+            $args = array();
+            foreach ($parameters as $parameter) {
+                $parameterClass = $parameter->getClass();
+                $value = $parameterClass ? $this->getBean($parameterClass->getName()) : null;
+                if(null === $value && $parameter->isDefaultValueConstant()) {
+                    $value = @constant($parameter->getDefaultValueConstantName());
+                }
+                if(null === $value && $parameter->isDefaultValueAvailable()) {
+                    $value = $parameter->getDefaultValue();
+                }
+                array_push($args, $value);
+            }
+            $instance = $class->newInstanceArgs($args);
+        }
+        if($class->implementsInterface(BeanPrototype::class)) return $instance;
         if($class->implementsInterface(BeanSingleton::class)) {
             $this->setBean($key, $instance);
+            return $instance;
         }
-        return $instance;
+        return null; // 不允许直接实现BeanBase
     }
     
     public function setBean($key, $value) {
