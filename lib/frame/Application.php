@@ -4,7 +4,6 @@ namespace pwframe\lib\frame;
 use Exception;
 use ReflectionClass;
 use pwframe\lib\frame\ioc\WebApplicationContext;
-use pwframe\application\controller\IndexController;
 
 class Application {
     private $autoloadExtension = '.php';
