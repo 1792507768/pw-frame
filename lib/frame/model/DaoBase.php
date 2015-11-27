@@ -1,6 +1,10 @@
 <?php
 namespace pwframe\lib\frame\model;
 
-abstract class DaoBase {
-    
+use pwframe\lib\frame\ioc\BeanPrototype;
+
+abstract class DaoBase implements BeanPrototype {
+    public function diDefinition() {
+        return array();
+    }
 }

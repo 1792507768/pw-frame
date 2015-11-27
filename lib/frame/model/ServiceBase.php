@@ -1,6 +1,9 @@
 <?php
 namespace pwframe\lib\frame\model;
 
-abstract class ServiceBase {
-    
+use pwframe\lib\frame\ioc\BeanSingleton;
+abstract class ServiceBase implements BeanSingleton {
+    public function diDefinition() {
+        return array();
+    }
 }

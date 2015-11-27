@@ -1,7 +1,9 @@
 <?php
 namespace pwframe\lib\frame\controller;
 
-abstract class ControllerBase {
+use pwframe\lib\frame\ioc\BeanPrototype;
+
+abstract class ControllerBase implements BeanPrototype {
     protected $webApplicationContext;
     protected $appUri, $appUrl, $appPath, $rootPath;
     protected $controllerName, $actionName;
@@ -86,6 +88,10 @@ abstract class ControllerBase {
     
     public function destroy($actionVal) {
         return $actionVal;
+    }
+    
+    public function diDefinition() {
+        return array();
     }
     
     /**

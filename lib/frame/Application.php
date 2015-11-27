@@ -3,6 +3,8 @@ namespace pwframe\lib\frame;
 
 use Exception;
 use ReflectionClass;
+use pwframe\lib\frame\ioc\WebApplicationContext;
+use pwframe\application\controller\IndexController;
 
 class Application {
     private $autoloadExtension = '.php';
@@ -41,7 +43,9 @@ class Application {
         spl_autoload_register(array($this, 'autoload'));
         $this->applicationConfig = require_once $this->rootPath.$this->configDirectory.DIRECTORY_SEPARATOR.'application.config.php';
         $this->webApplicationContext = WebApplicationContext::getInstance();
-        // $webApplicationContext setBean($this->applicationConfig);
+        $this->webApplicationContext->setBean('applicationConfig', function () {
+            return $this->applicationConfig;
+        });
     }
     
     public function autoload($className) {
@@ -77,9 +81,10 @@ class Application {
     }
     
     private function processInvoke($route, $e, $count) {
-        $controller = new ReflectionClass($this->rootNamespace.$this->applicationConfig['controllerNamePath']
-            .'\\'.ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix']);
-        $instance = $controller->newInstanceArgs();
+        $className = $this->rootNamespace.$this->applicationConfig['controllerNamePath']
+            .'\\'.ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix'];
+        $instance = $this->webApplicationContext->getBean($className);
+        $controller = new ReflectionClass($instance);
         $instance->setWebApplicationContext($this->webApplicationContext);
         $instance->setAppUrl($this->appUrl);
         $instance->setAppUri($this->appUri);
