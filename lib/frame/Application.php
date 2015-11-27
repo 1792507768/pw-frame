@@ -77,8 +77,8 @@ class Application {
     }
     
     private function processInvoke($route, $e, $count) {
-        $controller = new ReflectionClass($this->rootNamespace
-            .$this->applicationConfig['controllerNamePath'].'\\'.$route['controller'].$this->applicationConfig['defaultControllerSuffix']);
+        $controller = new ReflectionClass($this->rootNamespace.$this->applicationConfig['controllerNamePath']
+            .'\\'.ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix']);
         $instance = $controller->newInstanceArgs();
         $instance->setWebApplicationContext($this->webApplicationContext);
         $instance->setAppUrl($this->appUrl);
