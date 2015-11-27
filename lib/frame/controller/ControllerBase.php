@@ -1,7 +1,7 @@
 <?php
 namespace pwframe\lib\frame\controller;
 
-class ControllerBase {
+abstract class ControllerBase {
     protected $webApplicationContext;
     protected $appUri, $appUrl, $appPath, $rootPath;
     protected $controllerName, $actionName;

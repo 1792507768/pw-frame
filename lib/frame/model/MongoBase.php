@@ -1,6 +1,6 @@
 <?php
 namespace pwframe\lib\frame\model;
 
-class MongoBase extends DaoBase {
+abstract class MongoBase extends DaoBase {
 
 }

@@ -1,5 +1,5 @@
 <?php
-namespace pwframe\lib\frame;
+namespace pwframe\lib\frame\ioc;
 
 class WebApplicationContext {
     
