@@ -1,5 +1,5 @@
 <?php
-return array(
+return [
     'controllerNamePath' => 'application', // Controller所在包路径
     'defaultControllerName' => 'index', // 默认控制器名称
     'defaultActionName' => 'index', // 默认方法名称
@@ -9,4 +9,4 @@ return array(
     'defaultActionSuffix' => 'Action', // 方法后缀
     'allowPathParams' => 0, // 是否启用路径参数
     'dateTimeFormat' => 'yyyy-MM-dd HH:mm:ss', // 默认日期格式
-);
+];

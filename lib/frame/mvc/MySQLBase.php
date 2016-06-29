@@ -42,15 +42,17 @@ abstract class MySQLBase extends DaoBase {
     }
     
     /**
-     * 数据库名称
+     * 数据库名称，返回空采用配置文件中的默认值
      */
-    abstract public function databaseName();
+    public function databaseName() {
+        return null;
+    }
     
     /**
-     * 数据库编码
+     * 数据库编码，返回空采用配置文件中的默认值
      */
     public function charset() {
-        return 'utf-8';
+        return null;
     }
     
     /**
