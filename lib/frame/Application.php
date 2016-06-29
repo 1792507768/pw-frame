@@ -4,6 +4,7 @@ namespace pwframe\lib\frame;
 use Exception;
 use ReflectionClass;
 use pwframe\lib\frame\ioc\WebApplicationContext;
+use pwframe\lib\frame\exception\ApplicationException;
 
 class Application {
     private $autoloadExtension = '.php';
@@ -148,5 +149,3 @@ class Application {
         return $route;
     }
 }
-
-class ApplicationException extends Exception {}

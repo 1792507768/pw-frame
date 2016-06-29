@@ -1,5 +1,5 @@
 <?php
-namespace pwframe\lib\frame\controller;
+namespace pwframe\lib\frame\mvc;
 
 abstract class ControllerBase {
     protected $webApplicationContext;

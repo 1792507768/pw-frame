@@ -1,5 +1,5 @@
 <?php
-namespace pwframe\lib\frame\model;
+namespace pwframe\lib\frame\mvc;
 
 abstract class DaoBase {
     
