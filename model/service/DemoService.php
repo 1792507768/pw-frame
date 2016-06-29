@@ -1,5 +1,5 @@
 <?php
-namespace pwframe\application\service;
+namespace pwframe\model\service;
 
 use pwframe\lib\frame\model\ServiceBase;
 use pwframe\lib\frame\ioc\BeanSingleton;

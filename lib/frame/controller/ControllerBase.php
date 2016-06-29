@@ -4,7 +4,7 @@ namespace pwframe\lib\frame\controller;
 abstract class ControllerBase {
     protected $webApplicationContext;
     protected $appUri, $appUrl, $appPath, $rootPath;
-    protected $controllerName, $actionName;
+    protected $moduleName, $controllerName, $actionName;
     protected $params; // 请求参数
     protected $assign; // 视图数据Map对象
 
@@ -30,6 +30,14 @@ abstract class ControllerBase {
 
     public function getRootPath() {
         return $this->rootPath;
+    }
+
+    public function getModuleName() {
+        return $this->moduleName;
+    }
+
+    public function setModuleName($moduleName) {
+        $this->moduleName = $moduleName;
     }
 
     public function getControllerName() {
@@ -107,7 +115,8 @@ abstract class ControllerBase {
         if(null == $action) $action = $this->actionName;
         extract($this->assign);
         include $this->rootPath.'application'.DIRECTORY_SEPARATOR
-            .'view'.DIRECTORY_SEPARATOR.$controller.DIRECTORY_SEPARATOR.$action.'.php';
+            .$this->moduleName.DIRECTORY_SEPARATOR.'view'
+            .DIRECTORY_SEPARATOR.$controller.DIRECTORY_SEPARATOR.$action.'.php';
         return null;
     }
     

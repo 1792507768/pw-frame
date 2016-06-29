@@ -1,8 +1,8 @@
 <?php
-namespace pwframe\application\controller;
+namespace pwframe\application\frontend\controller;
 
 use pwframe\lib\core\component\CoreController;
-use pwframe\application\service\DemoService;
+use pwframe\model\service\DemoService;
 use pwframe\lib\frame\ioc\BeanPrototype;
 
 class IndexController extends CoreController implements BeanPrototype {

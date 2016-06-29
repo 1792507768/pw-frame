@@ -1,6 +1,6 @@
 <?php
 return array(
-    'controllerNamePath' => 'application\\controller', // Controller所在包路径
+    'controllerNamePath' => 'application', // Controller所在包路径
     'defaultControllerName' => 'index', // 默认控制器名称
     'defaultActionName' => 'index', // 默认方法名称
     'defaultErrorController' => 'error', // 错误处理控制器名称

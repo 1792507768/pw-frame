@@ -66,11 +66,8 @@ class Application {
             if(null == $route) throw new Exception('uriError');
             $this->processInvoke($route, null, 0);
         } catch (Exception $e) {
-            $route = array(
-                'controller' => $this->applicationConfig['defaultErrorController'],
-                'action' => $this->applicationConfig['defaultErrorAction'],
-                'paramString' => ''
-            );
+            $route['controller'] = $this->applicationConfig['defaultErrorController'];
+            $route['action'] = $this->applicationConfig['defaultErrorAction'];
             try {
                 $this->processInvoke($route, $e, 0);
             } catch (Exception $e1) {
@@ -81,7 +78,8 @@ class Application {
     
     private function processInvoke($route, $e, $count) {
         $className = $this->rootNamespace.$this->applicationConfig['controllerNamePath']
-            .'\\'.ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix'];
+            .'\\'.$route['module']."\\controller".'\\'
+            .ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix'];
         $instance = $this->webApplicationContext->getBean($className);
         $controller = new ReflectionClass($instance);
         $instance->setWebApplicationContext($this->webApplicationContext);
@@ -89,6 +87,7 @@ class Application {
         $instance->setAppUri($this->appUri);
         $instance->setAppPath($this->appPath);
         $instance->setRootPath($this->rootPath);
+        $instance->setModuleName($route['module']);
         $instance->setControllerName($route['controller']);
         $instance->setActionName($route['action']);
         $instance->setParams($_REQUEST);
@@ -115,11 +114,8 @@ class Application {
         if ($count > 0) {
             throw new Exception('route:'.implode(',', $route), 0, $e);
 		}
-		$route = array(
-		    'controller' => $this->applicationConfig['defaultErrorController'],
-		    'action' => $this->applicationConfig['defaultErrorAction'],
-		    'paramString' => ''
-		);
+		$route['controller'] = $this->applicationConfig['defaultErrorController'];
+		$route['action'] = $this->applicationConfig['defaultErrorAction'];
 		try {
 			$this->processInvoke($route, $e, $count++);
 		} catch (Exception $e1) {
@@ -129,6 +125,7 @@ class Application {
     
     private function parseRoute() {
         $route = array(
+            'module' => 'frontend',
             'controller' => $this->applicationConfig['defaultControllerName'],
             'action' => $this->applicationConfig['defaultActionName'],
             'paramString' => ''

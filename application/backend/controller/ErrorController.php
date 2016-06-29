@@ -1,5 +1,5 @@
 <?php
-namespace pwframe\application\controller;
+namespace pwframe\application\backend\controller;
 
 use pwframe\lib\core\component\CoreController;
 

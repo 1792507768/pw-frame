@@ -1,5 +1,5 @@
 <?php
-namespace pwframe\application\dao;
+namespace pwframe\model\dao;
 
 use pwframe\lib\frame\model\DaoBase;
 
