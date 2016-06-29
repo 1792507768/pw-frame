@@ -14,8 +14,8 @@ abstract class MySQLBase extends DaoBase {
     const DEBUG_RECONN = 4;
     
     private static $debug = 0;
-    private static $reconn = 3;
-    private $db;
+    private static $reconnection = 3;
+    private $connection;
     private $where;
     private $limit;
     private $offset;
@@ -37,8 +37,8 @@ abstract class MySQLBase extends DaoBase {
     private function __clone() {}
     
     public function __construct() {
-        $this->db = Connection::getMySQLInstance($this->databaseName());
-        $this->db->setCharset($this->charset());
+        $this->connection = Connection::getMySQLInstance($this->databaseName());
+        $this->connection->setCharset($this->charset());
     }
     
     /**
@@ -85,7 +85,7 @@ abstract class MySQLBase extends DaoBase {
      */
     public function setDebug($debug = 0) {
         self::$debug = $debug;
-        $this->db->setDebug($debug);
+        $this->connection->setDebug($debug);
         return $this;
     }
     
@@ -101,8 +101,8 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 设置库断开后，偿试重新连接并执行的次数 0为不偿试重连
      */
-    public function setReConn($reconn) {
-        self::$reconn = $reconn;
+    public function setReConnection($reconnection) {
+        self::$reconnection = $reconnection;
         return $this;
     }
     
@@ -433,7 +433,7 @@ abstract class MySQLBase extends DaoBase {
      */
     public function query($isPrepare = false) {
         $this->sql = $this->build();
-        if ($this->execute(true, $isPrepare, self::$reconn)) {
+        if ($this->execute(true, $isPrepare, self::$reconnection)) {
             if ($isPrepare) {
                 return true;
             }
@@ -448,7 +448,7 @@ abstract class MySQLBase extends DaoBase {
      */
     public function queryAll($fetchMode = null, $isPrepare = false) {
         $this->sql = $this->build();
-        if ($this->execute(true, $isPrepare, self::$reconn)) {
+        if ($this->execute(true, $isPrepare, self::$reconnection)) {
             if ($isPrepare) {
                 return true;
             }
@@ -485,7 +485,7 @@ abstract class MySQLBase extends DaoBase {
         $this->offset = null;
         $this->sql = $this->build();
         $return = false;
-        if ($this->execute(true, $isPrepare, self::$reconn)) {
+        if ($this->execute(true, $isPrepare, self::$reconnection)) {
             if ($isPrepare) {
                 $return = true;
             } else {
@@ -528,7 +528,7 @@ abstract class MySQLBase extends DaoBase {
             $this->sql .= $this->duplicateUpdate($names);
         }
         $this->bindValues($params);
-        $ret = $this->execute(false, false, self::$reconn);
+        $ret = $this->execute(false, false, self::$reconnection);
         if ($ret) {
             return $this->pdo->lastInsertId();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
@@ -572,7 +572,7 @@ abstract class MySQLBase extends DaoBase {
         if ($need_update) {
             $this->sql .= $this->duplicateUpdate($columns);
         }
-        $ret = $this->execute(false, false, self::$reconn);
+        $ret = $this->execute(false, false, self::$reconnection);
         if ($ret) {
             return $this->pdoStatement->rowCount();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
@@ -601,7 +601,7 @@ abstract class MySQLBase extends DaoBase {
         $where = $this->buildWhere($condition, $params);
         $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
         $this->bindValues($params);
-        $ret = $this->execute(false, $isPrepare, self::$reconn);
+        $ret = $this->execute(false, $isPrepare, self::$reconnection);
         if ($ret && $isPrepare) {
             return true;
         }
@@ -623,7 +623,7 @@ abstract class MySQLBase extends DaoBase {
         $where = $this->buildWhere($condition, $params);
         $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
         $this->bindValues($params);
-        $ret = $this->execute(false, $isPrepare, self::$reconn);
+        $ret = $this->execute(false, $isPrepare, self::$reconnection);
         if ($ret && $isPrepare) {
             return true;
         }
@@ -642,9 +642,9 @@ abstract class MySQLBase extends DaoBase {
         try {
             $forRead = $this->isReadQuery($sql);
             if (!$this->isMaster && $forRead) {
-                $pdo = $this->db->getSlave();
+                $pdo = $this->connection->getSlave();
             } else {
-                $pdo = $this->db->getMaster();
+                $pdo = $this->connection->getMaster();
             }
             if (self::$debug) {
                 $startTime = microtime(true);
@@ -662,7 +662,7 @@ abstract class MySQLBase extends DaoBase {
             }
             $this->errorCode = $e->getCode();
             $this->errorMsg = $e->getMessage();
-            if ($this->db->isTransaction()) {
+            if ($this->connection->isTransaction()) {
                 throw $e;
             }
         }
@@ -695,15 +695,15 @@ abstract class MySQLBase extends DaoBase {
     }
     
     public function beginTransaction() {
-        $this->db->beginTransaction();
+        $this->connection->beginTransaction();
     }
     
     public function commit() {
-        $this->db->commit();
+        $this->connection->commit();
     }
     
     public function rollBack() {
-        $this->db->rollBack();
+        $this->connection->rollBack();
     }
     
     /**
@@ -724,13 +724,13 @@ abstract class MySQLBase extends DaoBase {
                     $this->pdoStatement->closeCursor();
                     $this->pdoStatement = null;
                 }
-                if ($this->isMaster || $this->db->isTransaction()) {
+                if ($this->isMaster || $this->connection->isTransaction()) {
                     $forRead = false;
                 }
                 if ($forRead) {
-                    $this->pdo = $this->db->getSlave();
+                    $this->pdo = $this->connection->getSlave();
                 } else {
-                    $this->pdo = $this->db->getMaster();
+                    $this->pdo = $this->connection->getMaster();
                 }
                 if (self::$debug) {
                     echo ("Debug: sql = {$this->sql}<br>\n");
@@ -761,7 +761,7 @@ abstract class MySQLBase extends DaoBase {
             }
             $this->errorCode = $e->getCode();
             $this->errorMsg = $e->getMessage();
-            if ($this->db->isTransaction()) {
+            if ($this->connection->isTransaction()) {
                 throw $e;
             }
             if ($curreconn > 0 && $e->errorInfo[1] == 2006) {
@@ -769,7 +769,7 @@ abstract class MySQLBase extends DaoBase {
                     echo '<font color=red>reconn:' . $curreconn . '</font>';
                 }
                 $curreconn--;
-                $this->db->close();
+                $this->connection->close();
                 return $this->execute($forRead, $isPrepare, $curreconn);
             }
         }
@@ -1146,7 +1146,7 @@ abstract class MySQLBase extends DaoBase {
             return $str;
         }
         if (!$this->pdo) {
-            $this->pdo = $this->db->getSlave();
+            $this->pdo = $this->connection->getSlave();
         }
         if (($value = $this->pdo->quote($str)) !== false) {
             return $value;
