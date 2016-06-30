@@ -3,17 +3,11 @@ namespace pwframe\lib\frame\database;
 
 use \PDO;
 use \PDOException;
-use pwframe\lib\frame\Logger;
 
 class MySQLConnection extends Connection {
     
     private static $instance;
     private $resourceArray = array();
-    private $logger;
-    
-    private function __construct() {
-        $this->logger = Logger::getInstance();
-    }
     
     public static function getInstance() {
         if(null == self::$instance) {
@@ -39,7 +33,7 @@ class MySQLConnection extends Connection {
         if(empty($charset)) $charset = $config['charset'];
         $key = '___'.$msKey.'___'.$dbName.'___'.$charset.'___';
         if(isset($this->resourceArray[$key])) {
-            $this->logger->debug('MySQL:['.$msKey.'] hit '.$key);
+            if($this->logger->isDebugEnabled()) $this->logger->debug('MySQL:['.$msKey.'] hit '.$key);
         } else {
             if(empty($config['options'])) $config['options'] = [
                 PDO::ATTR_EMULATE_PREPARES => false,
@@ -47,11 +41,11 @@ class MySQLConnection extends Connection {
             ];
             $dsn = "mysql:host={$config['host']};port={$config['port']};dbname={$dbName}";
             if (!empty($this->charset)) $dsn .= ';charset='.$charset;
-            $this->logger->debug('MySQL:['.$msKey.'] create '.$key.'-'.$dsn);
+            if($this->logger->isDebugEnabled()) $this->logger->debug('MySQL:['.$msKey.'] create '.$key.'-'.$dsn);
             try {
                 $this->resourceArray[$key] = new PDO($dsn, $config['username'], $config['password'], $config['options']);
             } catch (PDOException $e) {
-                $this->logger->error($e->getMessage());
+                if($this->logger->isErrorEnabled()) $this->logger->error($e->getMessage());
                 return null;
             }
         }

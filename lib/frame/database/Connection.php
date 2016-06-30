@@ -3,9 +3,16 @@ namespace pwframe\lib\frame\database;
 
 use pwframe\lib\frame\ioc\WebApplicationContext;
 use pwframe\lib\frame\Application;
+use pwframe\lib\frame\Logger;
+
 abstract class Connection {
     
     private $config;
+    protected $logger;
+    
+    public function __construct() {
+        $this->logger = Logger::getInstance();
+    }
     
     protected function loadConfig($dbType) {
         if(null == $this->config) {

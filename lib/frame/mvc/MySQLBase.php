@@ -4,17 +4,10 @@ namespace pwframe\lib\frame\model;
 use \PDOException;
 use \PDO;
 use pwframe\lib\frame\mvc\DaoBase;
-use pwframe\lib\frame\database\MySQLConnection;
 
 abstract class MySQLBase extends DaoBase {
     
-    const PARAM_PREFIX = ':qp';
-    const DEBUG_SQL = 1;
-    const DEBUG_PARAM = 2;
-    const DEBUG_RECONN = 4;
-    
-    private static $debug = 0;
-    private static $reconnection = 3;
+    private static $retry = 3; // 失败重连次数
     private $where;
     private $limit;
     private $offset;
@@ -25,15 +18,14 @@ abstract class MySQLBase extends DaoBase {
     private $groupBy;
     private $join;
     private $having;
-    private $resource;
-    private $statement;
+    private $master; // 主库连接对象
+    private $slave; // 从库连接对象
+    private $statement; // 当前预处理对象
     private $_pendingParams = [];
     private $sql;
     private $errorCode;
     private $errorMsg;
     private $isMaster = false;
-    
-    private function __clone() {}
     
     /**
      * 数据库名称，返回空采用配置文件中的默认值
@@ -73,18 +65,6 @@ abstract class MySQLBase extends DaoBase {
     }
     
     /**
-     * 设置调试等级
-     * @param integer $debug 多个用 | 连接，如 DEBUG_SQL|DEBUG_PARAM
-     *  DEBUG_SQL 只输出执行的SQL语句
-     *  DEBUG_PARAM 将绑定的参数值输出
-     *  DEBUG_RECONN 显示断库重连信息
-     */
-    public function setDebug($debug = 0) {
-        self::$debug = $debug;
-        return $this;
-    }
-    
-    /**
      * 切换表主从模式
      * @param boolean $master true 读写全为主库，false 写主读从
      */
@@ -96,8 +76,8 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 设置库断开后，偿试重新连接并执行的次数 0为不偿试重连
      */
-    public function setReConnection($reconnection) {
-        self::$reconnection = $reconnection;
+    public function setRetry($retry) {
+        self::$retry = $retry;
         return $this;
     }
     
@@ -384,35 +364,35 @@ abstract class MySQLBase extends DaoBase {
      * 返回 select count($q) 数量
      */
     public function count($q = '*') {
-        return $this->queryScalar("COUNT($q)");
+        return $this->one("COUNT($q)");
     }
     
     /**
      * 返回 select sum($q) 总数
      */
     public function sum($q) {
-        return $this->queryScalar("SUM($q)");
+        return $this->one("SUM($q)");
     }
     
     /**
      * 返回 select avg($q) 均值
      */
     public function average($q) {
-        return $this->queryScalar("AVG($q)");
+        return $this->one("AVG($q)");
     }
     
     /**
      * 返回 select min($q) 最小值
      */
     public function min($q) {
-        return $this->queryScalar("MIN($q)");
+        return $this->one("MIN($q)");
     }
     
     /**
      * 返回 select max($q) 最大值
      */
     public function max($q) {
-        return $this->queryScalar("MAX($q)");
+        return $this->one("MAX($q)");
     }
     
     /**
@@ -428,22 +408,22 @@ abstract class MySQLBase extends DaoBase {
      */
     public function query($isPrepare = false) {
         $this->sql = $this->build();
-        if ($this->execute(true, $isPrepare, self::$reconnection)) {
+        if ($this->execute(true, $isPrepare, self::$retry)) {
             if ($isPrepare) {
                 return true;
             }
             return $this->statement;
         }
-        return false;
+        return null;
     }
     
     /**
      * 返回查询的所有数据数组
      * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function queryAll($fetchMode = null, $isPrepare = false) {
+    public function all($fetchMode = null, $isPrepare = false) {
         $this->sql = $this->build();
-        if ($this->execute(true, $isPrepare, self::$reconnection)) {
+        if ($this->execute(true, $isPrepare, self::$retry)) {
             if ($isPrepare) {
                 return true;
             }
@@ -454,14 +434,14 @@ abstract class MySQLBase extends DaoBase {
             $this->statement->closeCursor();
             return $return;
         }
-        return false;
+        return null;
     }
     
     /**
      * 返回多行单值
      */
-    public function queryColumn() {
-        return $this->queryAll(PDO::FETCH_COLUMN);
+    public function column() {
+        return $this->all(PDO::FETCH_COLUMN);
     }
     
     /**
@@ -469,7 +449,7 @@ abstract class MySQLBase extends DaoBase {
      * @param string $field 可选参数 数据表中字段，如果设值，将返回该字段标量，否则按select()方法设值的字段返回一行
      * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function queryScalar($field = '', $isPrepare = false) {
+    public function one($field = '', $isPrepare = false) {
         if (!empty($field)) {
             $select = $this->select;
             $this->select = [$field];
@@ -480,7 +460,7 @@ abstract class MySQLBase extends DaoBase {
         $this->offset = null;
         $this->sql = $this->build();
         $return = false;
-        if ($this->execute(true, $isPrepare, self::$reconnection)) {
+        if ($this->execute(true, $isPrepare, self::$retry)) {
             if ($isPrepare) {
                 $return = true;
             } else {
@@ -503,9 +483,9 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 单条插入
      * @param array $data 插入的数据是以表字段名为下标的数组，如：['name' => 'Sam','age' => 30]
-     * @param type $need_update
+     * @param type $needUpdate
      */
-    public function insert($data, $need_update = false) {
+    public function insert($data, $needUpdate = false) {
         $params = [];
         $names = [];
         $placeholders = [];
@@ -519,15 +499,15 @@ abstract class MySQLBase extends DaoBase {
         $this->sql = 'INSERT INTO ' . $this->tableName()
         . (!empty($names) ? ' (' . implode(', ', $names) . ')' : '')
         . (!empty($placeholders) ? ' VALUES (' . implode(', ', $placeholders) . ')' : ' DEFAULT VALUES');
-        if ($need_update) {
+        if ($needUpdate) {
             $this->sql .= $this->duplicateUpdate($names);
         }
         $this->bindValues($params);
-        $ret = $this->execute(false, false, self::$reconnection);
+        $ret = $this->execute(false, false, self::$retry);
         if ($ret) {
             return $this->resource->lastInsertId();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
-            return $this->insert($data, $need_update);
+            return $this->insert($data, $needUpdate);
         } else {
             return false;
         }
@@ -536,9 +516,9 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 批量插入
      * @param array $datas 插入的数据是以表字段名为下标的二维数组，如：[['name' => 'Sam1','age' => 30],['name' => 'Sam1','age' => 40]]
-     * @param type $need_update
+     * @param boolean $needUpdate
      */
-    public function batchInsert($datas, $need_update = false) {
+    public function batchInsert($datas, $needUpdate = false) {
         if (!is_array($datas) || !is_array(current($datas))) {
             return false;
         }
@@ -564,14 +544,14 @@ abstract class MySQLBase extends DaoBase {
             $columns[$i] = $this->quoteColumnName($name);
         }
         $this->sql = 'INSERT INTO ' . $this->tableName() . ' (' . implode(', ', $columns) . ') VALUES ' . implode(', ', $values);
-        if ($need_update) {
+        if ($needUpdate) {
             $this->sql .= $this->duplicateUpdate($columns);
         }
-        $ret = $this->execute(false, false, self::$reconnection);
+        $ret = $this->execute(false, false, self::$retry);
         if ($ret) {
             return $this->statement->rowCount();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
-            return $this->batchInsert($datas, $need_update);
+            return $this->batchInsert($datas, $needUpdate);
         } else {
             return false;
         }
@@ -596,14 +576,14 @@ abstract class MySQLBase extends DaoBase {
         $where = $this->buildWhere($condition, $params);
         $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
         $this->bindValues($params);
-        $ret = $this->execute(false, $isPrepare, self::$reconnection);
+        $ret = $this->execute(false, $isPrepare, self::$retry);
         if ($ret && $isPrepare) {
             return true;
         }
         if ($ret) {
             return $this->statement->rowCount();
         } else {
-            return false;
+            return null;
         }
     }
     
@@ -618,14 +598,14 @@ abstract class MySQLBase extends DaoBase {
         $where = $this->buildWhere($condition, $params);
         $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
         $this->bindValues($params);
-        $ret = $this->execute(false, $isPrepare, self::$reconnection);
+        $ret = $this->execute(false, $isPrepare, self::$retry);
         if ($ret && $isPrepare) {
             return true;
         }
         if ($ret) {
             return $this->statement->rowCount();
         } else {
-            return false;
+            return null;
         }
     }
     
@@ -667,7 +647,7 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 清除 select() where() limit() offset() orderBy() groupBy() join() having()
      */
-    public function reSet() {
+    public function reset() {
         $this->statement = null;
         $this->_pendingParams = [];
         $this->select = null;
@@ -1172,13 +1152,13 @@ abstract class MySQLBase extends DaoBase {
     private function getPdoType($data) {
         static $typeMap = [
             // php type => PDO type
-            'boolean' => \PDO::PARAM_BOOL,
-            'integer' => \PDO::PARAM_INT,
-            'string' => \PDO::PARAM_STR,
-            'resource' => \PDO::PARAM_LOB,
-            'NULL' => \PDO::PARAM_NULL,
+            'boolean' => PDO::PARAM_BOOL,
+            'integer' => PDO::PARAM_INT,
+            'string' => PDO::PARAM_STR,
+            'resource' => PDO::PARAM_LOB,
+            'NULL' => PDO::PARAM_NULL,
         ];
         $type = gettype($data);
-        return isset($typeMap[$type]) ? $typeMap[$type] : \PDO::PARAM_STR;
+        return isset($typeMap[$type]) ? $typeMap[$type] : PDO::PARAM_STR;
     }
 }
