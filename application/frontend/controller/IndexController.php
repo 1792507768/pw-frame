@@ -5,6 +5,7 @@ use pwframe\lib\core\component\CoreController;
 use pwframe\model\service\DemoService;
 use pwframe\lib\frame\ioc\BeanPrototype;
 use pwframe\lib\frame\database\MySQLConnection;
+use pwframe\lib\frame\Logger;
 
 class IndexController extends CoreController implements BeanPrototype {
     
@@ -15,6 +16,7 @@ class IndexController extends CoreController implements BeanPrototype {
     }
 
     public function indexAction() {
+        Logger::getInstance()->setLevel(Logger::DEBUG);
         MySQLConnection::getInstance()->getResource(false);
         $this->assign('message', $this->demoSerivce->getMessage());
         return $this->displayTemplate();

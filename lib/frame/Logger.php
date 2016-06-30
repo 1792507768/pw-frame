@@ -48,7 +48,26 @@ class Logger {
     
     private function record($level, $msg) {
         if(self::$level) {
-            echo $msg;
+            switch ($level) {
+                case self::DEBUG:
+                    $title = 'DEBUG';
+                    break;
+                case self::INFO:
+                    $title = 'DEBUG';
+                    break;
+                case self::WARNA:
+                    $title = 'DEBUG';
+                    break;
+                case self::ERROR:
+                    $title = 'DEBUG';
+                    break;
+                case self::FATAL:
+                    $title = 'DEBUG';
+                    break;
+                default :
+                    return false;
+            }
+            echo $title.':'.$msg."<br>\n";
         }
         return true;
     }

@@ -49,7 +49,7 @@ class MySQLConnection extends Connection {
             if (!empty($this->charset)) $dsn .= ';charset='.$charset;
             $this->logger->debug('MySQL:['.$msKey.'] create '.$key.'-'.$dsn);
             try {
-                $this->resourceArray[$key] = new PDO($dsn, $config['port'], $config['port'], $config['options']);
+                $this->resourceArray[$key] = new PDO($dsn, $config['username'], $config['password'], $config['options']);
             } catch (PDOException $e) {
                 $this->logger->error($e->getMessage());
                 return null;
