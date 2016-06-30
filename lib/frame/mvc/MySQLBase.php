@@ -3,8 +3,8 @@ namespace pwframe\lib\frame\model;
 
 use \PDOException;
 use \PDO;
-use pwframe\lib\frame\database\Connection;
 use pwframe\lib\frame\mvc\DaoBase;
+use pwframe\lib\frame\database\MySQLConnection;
 
 abstract class MySQLBase extends DaoBase {
     
@@ -15,7 +15,6 @@ abstract class MySQLBase extends DaoBase {
     
     private static $debug = 0;
     private static $reconnection = 3;
-    private $connection;
     private $where;
     private $limit;
     private $offset;
@@ -26,8 +25,8 @@ abstract class MySQLBase extends DaoBase {
     private $groupBy;
     private $join;
     private $having;
-    private $pdo;
-    private $pdoStatement;
+    private $resource;
+    private $statement;
     private $_pendingParams = [];
     private $sql;
     private $errorCode;
@@ -35,11 +34,6 @@ abstract class MySQLBase extends DaoBase {
     private $isMaster = false;
     
     private function __clone() {}
-    
-    public function __construct() {
-        $this->connection = Connection::getMySQLInstance($this->databaseName());
-        $this->connection->setCharset($this->charset());
-    }
     
     /**
      * 数据库名称，返回空采用配置文件中的默认值
@@ -87,7 +81,6 @@ abstract class MySQLBase extends DaoBase {
      */
     public function setDebug($debug = 0) {
         self::$debug = $debug;
-        $this->connection->setDebug($debug);
         return $this;
     }
     
@@ -371,18 +364,18 @@ abstract class MySQLBase extends DaoBase {
      * @see http://www.php.net/manual/en/function.PDOStatement-bindParam.php
      */
     public function bindParam($name, &$value, $dataType = null, $length = null, $driverOptions = null) {
-        if (!$this->pdoStatement) {
-            throw new PDOException('bindParam must exist pdoStatement.call method insert update delete query..');
+        if (!$this->statement) {
+            throw new PDOException('bindParam must exist statement.call method insert update delete query..');
         }
         if ($dataType === null) {
             $dataType = $this->getPdoType($value);
         }
         if ($length === null) {
-            $this->pdoStatement->bindParam($name, $value, $dataType);
+            $this->statement->bindParam($name, $value, $dataType);
         } elseif ($driverOptions === null) {
-            $this->pdoStatement->bindParam($name, $value, $dataType, $length);
+            $this->statement->bindParam($name, $value, $dataType, $length);
         } else {
-            $this->pdoStatement->bindParam($name, $value, $dataType, $length, $driverOptions);
+            $this->statement->bindParam($name, $value, $dataType, $length, $driverOptions);
         }
         return $this;
     }
@@ -439,7 +432,7 @@ abstract class MySQLBase extends DaoBase {
             if ($isPrepare) {
                 return true;
             }
-            return $this->pdoStatement;
+            return $this->statement;
         }
         return false;
     }
@@ -457,8 +450,8 @@ abstract class MySQLBase extends DaoBase {
             if ($fetchMode === null) {
                 $fetchMode = PDO::FETCH_ASSOC;
             }
-            $return = $this->pdoStatement->fetchAll($fetchMode);
-            $this->pdoStatement->closeCursor();
+            $return = $this->statement->fetchAll($fetchMode);
+            $this->statement->closeCursor();
             return $return;
         }
         return false;
@@ -492,11 +485,11 @@ abstract class MySQLBase extends DaoBase {
                 $return = true;
             } else {
                 if (!empty($field)) {
-                    $return = $this->pdoStatement->fetchColumn(0);
+                    $return = $this->statement->fetchColumn(0);
                 } else {
-                    $return = $this->pdoStatement->fetch(PDO::FETCH_ASSOC);
+                    $return = $this->statement->fetch(PDO::FETCH_ASSOC);
                 }
-                $this->pdoStatement->closeCursor();
+                $this->statement->closeCursor();
             }
         }
         $this->limit = $limit;
@@ -532,7 +525,7 @@ abstract class MySQLBase extends DaoBase {
         $this->bindValues($params);
         $ret = $this->execute(false, false, self::$reconnection);
         if ($ret) {
-            return $this->pdo->lastInsertId();
+            return $this->resource->lastInsertId();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
             return $this->insert($data, $need_update);
         } else {
@@ -576,7 +569,7 @@ abstract class MySQLBase extends DaoBase {
         }
         $ret = $this->execute(false, false, self::$reconnection);
         if ($ret) {
-            return $this->pdoStatement->rowCount();
+            return $this->statement->rowCount();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
             return $this->batchInsert($datas, $need_update);
         } else {
@@ -608,7 +601,7 @@ abstract class MySQLBase extends DaoBase {
             return true;
         }
         if ($ret) {
-            return $this->pdoStatement->rowCount();
+            return $this->statement->rowCount();
         } else {
             return false;
         }
@@ -630,7 +623,7 @@ abstract class MySQLBase extends DaoBase {
             return true;
         }
         if ($ret) {
-            return $this->pdoStatement->rowCount();
+            return $this->statement->rowCount();
         } else {
             return false;
         }
@@ -644,15 +637,15 @@ abstract class MySQLBase extends DaoBase {
         try {
             $forRead = $this->isReadQuery($sql);
             if (!$this->isMaster && $forRead) {
-                $pdo = $this->connection->getSlave();
+                $resource = $this->connection->getSlave();
             } else {
-                $pdo = $this->connection->getMaster();
+                $resource = $this->connection->getMaster();
             }
             if (self::$debug) {
                 $startTime = microtime(true);
                 echo ("Debug: sql = {$sql}<br>\n");
             }
-            $result = $forRead ? ($pdo->query($sql)) : ($pdo->exec($sql));
+            $result = $forRead ? ($resource->query($sql)) : ($resource->exec($sql));
             if (self::$debug) {
                 $cxcuteTime = microtime(true) - $startTime;
                 echo ('<font color=' . ($cxcuteTime > 1 ? 'red' : 'green') . '>ExcuteTime: ' . $cxcuteTime . "</font><hr>\n");
@@ -675,7 +668,7 @@ abstract class MySQLBase extends DaoBase {
      * 清除 select() where() limit() offset() orderBy() groupBy() join() having()
      */
     public function reSet() {
-        $this->pdoStatement = null;
+        $this->statement = null;
         $this->_pendingParams = [];
         $this->select = null;
         $this->where = null;
@@ -721,24 +714,24 @@ abstract class MySQLBase extends DaoBase {
             return false;
         }
         try {
-            if (!$this->pdoStatement || $this->pdoStatement->queryString != $this->sql) {
-                if ($this->pdoStatement) {
-                    $this->pdoStatement->closeCursor();
-                    $this->pdoStatement = null;
+            if (!$this->statement || $this->statement->queryString != $this->sql) {
+                if ($this->statement) {
+                    $this->statement->closeCursor();
+                    $this->statement = null;
                 }
                 if ($this->isMaster || $this->connection->isTransaction()) {
                     $forRead = false;
                 }
                 if ($forRead) {
-                    $this->pdo = $this->connection->getSlave();
+                    $this->resource = $this->connection->getSlave();
                 } else {
-                    $this->pdo = $this->connection->getMaster();
+                    $this->resource = $this->connection->getMaster();
                 }
                 if (self::$debug) {
                     echo ("Debug: sql = {$this->sql}<br>\n");
                     $startTime = microtime(true);
                 }
-                $this->pdoStatement = $this->pdo->prepare($this->sql);
+                $this->statement = $this->resource->prepare($this->sql);
                 if (self::$debug) {
                     $bindTime = microtime(true) - $startTime;
                     echo ('<font color="' . ($bindTime > 1 ? 'red' : 'green') . '">prepareTime: ' . $bindTime . "</font><br>\n");
@@ -751,7 +744,7 @@ abstract class MySQLBase extends DaoBase {
             if (self::$debug) {
                 $startTime = microtime(true);
             }
-            $result = $this->pdoStatement->execute();
+            $result = $this->statement->execute();
             if (self::$debug) {
                 $cxcuteTime = microtime(true) - $startTime;
                 echo ('<font color="' . ($cxcuteTime > 1 ? 'red' : 'green') . '">ExcuteTime: ' . $cxcuteTime . "</font><br>\n");
@@ -788,7 +781,7 @@ abstract class MySQLBase extends DaoBase {
             echo '</dl>';
         }
         foreach ($this->_pendingParams as $name => $value) {
-            $this->pdoStatement->bindValue($name, $value[0], $value[1]);
+            $this->statement->bindValue($name, $value[0], $value[1]);
         }
         $this->_pendingParams = [];
     }
@@ -1147,10 +1140,10 @@ abstract class MySQLBase extends DaoBase {
         if (!is_string($str)) {
             return $str;
         }
-        if (!$this->pdo) {
-            $this->pdo = $this->connection->getSlave();
+        if (!$this->resource) {
+            $this->resource = $this->connection->getSlave();
         }
-        if (($value = $this->pdo->quote($str)) !== false) {
+        if (($value = $this->resource->quote($str)) !== false) {
             return $value;
         } else {
             // the driver doesn't support quote (e.g. oci)

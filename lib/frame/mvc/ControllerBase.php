@@ -2,19 +2,11 @@
 namespace pwframe\lib\frame\mvc;
 
 abstract class ControllerBase {
-    protected $webApplicationContext;
+    
     protected $appUri, $appUrl, $appPath, $rootPath;
     protected $moduleName, $controllerName, $actionName;
     protected $params; // 请求参数
     protected $assign; // 视图数据Map对象
-
-    public function getWebApplicationContext() {
-        return $this->webApplicationContext;
-    }
-
-    public function setWebApplicationContext($webApplicationContext) {
-        $this->webApplicationContext = $webApplicationContext;
-    }
 
     public function getAppUri() {
         return $this->appUri;

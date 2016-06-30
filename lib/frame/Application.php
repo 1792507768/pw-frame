@@ -7,13 +7,50 @@ use pwframe\lib\frame\ioc\WebApplicationContext;
 use pwframe\lib\frame\exception\ApplicationException;
 
 class Application {
-    private $autoloadExtension = '.php';
-    private $rootNamespace = 'pwframe\\';
-    private $webDirectory = 'web';
-    private $configDirectory = 'config';
+    
+    private $autoloadExtension = '.php'; // 文件后缀
+    private $rootNamespace = 'pwframe\\'; // 根命名空间
+    private $webDirectory = 'web'; // Web目录
+    private $configDirectory = 'config'; // 配置文件目录
     private $appUri, $appUrl, $appPath, $rootPath;
     private $applicationConfig, $webApplicationContext;
     
+    public function getAutoloadExtension(){
+        return $this->autoloadExtension;
+    }
+
+    public function getRootNamespace() {
+        return $this->rootNamespace;
+    }
+
+    public function getWebDirectory() {
+        return $this->webDirectory;
+    }
+
+    public function getConfigDirectory() {
+        return $this->configDirectory;
+    }
+
+    public function getAppUri() {
+        return $this->appUri;
+    }
+
+    public function getAppUrl() {
+        return $this->appUrl;
+    }
+
+    public function getAppPath() {
+        return $this->appPath;
+    }
+
+    public function getRootPath() {
+        return $this->rootPath;
+    }
+
+    public function getApplicationConfig() {
+        return $this->applicationConfig;
+    }
+
     public function __construct($appUri, $rootPath) {
         if(empty($appUri)) {
             $appUri = '/';
@@ -43,8 +80,8 @@ class Application {
         spl_autoload_register(array($this, 'autoload'));
         $this->applicationConfig = require_once $this->rootPath.$this->configDirectory.DIRECTORY_SEPARATOR.'application.config.php';
         $this->webApplicationContext = WebApplicationContext::getInstance();
-        $this->webApplicationContext->setBean('applicationConfig', function () {
-            return $this->applicationConfig;
+        $this->webApplicationContext->setBean(self::class, function () {
+            return $this;
         });
     }
     
@@ -83,7 +120,6 @@ class Application {
             .ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix'];
         $instance = $this->webApplicationContext->getBean($className);
         $controller = new ReflectionClass($instance);
-        $instance->setWebApplicationContext($this->webApplicationContext);
         $instance->setAppUrl($this->appUrl);
         $instance->setAppUri($this->appUri);
         $instance->setAppPath($this->appPath);

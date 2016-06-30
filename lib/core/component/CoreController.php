@@ -1,7 +1,7 @@
 <?php
 namespace pwframe\lib\core\component;
 
-use pwframe\lib\frame\controller\ControllerBase;
+use pwframe\lib\frame\mvc\ControllerBase;
 
 abstract class CoreController extends ControllerBase {
     
