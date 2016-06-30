@@ -99,7 +99,7 @@ class Application {
     }
     
     public function run() {
-        $route = $this->parseRoute();
+        $route = Router::getInstance()->parse($this->appUri, $this->applicationConfig);
         try {
             if(null == $route) throw new Exception('uriError');
             $this->processInvoke($route, null, 0);
@@ -160,28 +160,4 @@ class Application {
 		}
     }
     
-    private function parseRoute() {
-        $route = array(
-            'module' => 'frontend',
-            'controller' => $this->applicationConfig['defaultControllerName'],
-            'action' => $this->applicationConfig['defaultActionName'],
-            'paramString' => ''
-        );
-        $uri = $_SERVER['REQUEST_URI'];
-        if(!preg_match('/^[\\/_a-zA-Z\\d\\-]*$/', $uri)) return null;
-        if('/' != substr($uri, -1)) $uri .= '/';
-        $length = strlen($this->appUri);
-        if(strlen($uri) < $length) return null;
-        $uri = trim(substr($uri, $length), '/');
-        if(empty($uri)) return $route;
-        $uriArray = explode('/', $uri);
-        $length = count($uriArray);
-        $route['controller'] = $uriArray[0];
-        if(1 == $length) return $route;
-        $route['action'] = $uriArray[1];
-        if(2 == $length) return $route;
-        if(empty($this->applicationConfig['allowPathParams'])) return null;
-        $route['paramString'] = implode('/', array_slice($uriArray, 2));
-        return $route;
-    }
 }
