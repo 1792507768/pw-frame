@@ -21,6 +21,10 @@ class MySQLConnection extends Connection {
     private $transactionLevel = 0;
     private static $connectionArray = array();
     
+    public function getTablePrefix() {
+        return $this->tablePrefix;
+    }
+
     protected function __construct($config) {
         parent::__construct();
         $this->username = $config['username'];

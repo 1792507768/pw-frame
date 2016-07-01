@@ -1,11 +1,15 @@
 <?php
-namespace pwframe\lib\frame\model;
+namespace pwframe\lib\frame\mvc;
 
 use \PDOException;
 use \PDO;
+use \Exception;
 use pwframe\lib\frame\mvc\DaoBase;
+use pwframe\lib\frame\database\MySQLConnection;
 
 abstract class MySQLBase extends DaoBase {
+    
+    const PARAM_PREFIX = ':qp';
     
     private static $retry = 3; // 失败重连次数
     private $where;
@@ -19,6 +23,7 @@ abstract class MySQLBase extends DaoBase {
     private $join;
     private $having;
     private $connection;
+    private $resource; // 当前连接资源
     private $statement; // 当前预处理对象
     private $_pendingParams = [];
     private $sql;
@@ -29,11 +34,13 @@ abstract class MySQLBase extends DaoBase {
     private function __clone() {}
     
     public function __construct() {
+        parent::__construct();
         $this->init();
     }
     
     public function init() {
-        
+        $this->connection = MySQLConnection::getInstance($this->dbName(), $this->charset());
+        if(null == $this->connection) throw Exception('MySQLConnection::getInstance failed!');
     }
     
     /**
@@ -48,6 +55,13 @@ abstract class MySQLBase extends DaoBase {
      */
     public function charset() {
         return null;
+    }
+    
+    /**
+     * 数据库表前缀
+     */
+    protected function tablePrefix() {
+        return $this->connection->getTablePrefix();
     }
     
     /**
@@ -66,7 +80,7 @@ abstract class MySQLBase extends DaoBase {
     public function prepareData($data) {
         $collumns = $this->collumnNames();
         foreach ($data as $name => $value) {
-            if (!in_array($name, $collumns)) {
+            if (!key_exists($name, $collumns)) {
                 unset($data[$name]);
             }
         }
@@ -413,14 +427,10 @@ abstract class MySQLBase extends DaoBase {
     
     /**
      * 返回查询的数据资源对象，使用fetch()方法遍历数据，如果取出数据后要循环处理，建议使用该方法
-     * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function query($isPrepare = false) {
+    public function query() {
         $this->sql = $this->build();
-        if ($this->execute(true, $isPrepare, self::$retry)) {
-            if ($isPrepare) {
-                return true;
-            }
+        if ($this->execute(true, self::$retry)) {
             return $this->statement;
         }
         return null;
@@ -428,14 +438,10 @@ abstract class MySQLBase extends DaoBase {
     
     /**
      * 返回查询的所有数据数组
-     * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function all($fetchMode = null, $isPrepare = false) {
+    public function all($fetchMode = null) {
         $this->sql = $this->build();
-        if ($this->execute(true, $isPrepare, self::$retry)) {
-            if ($isPrepare) {
-                return true;
-            }
+        if ($this->execute(true, self::$retry)) {
             if ($fetchMode === null) {
                 $fetchMode = PDO::FETCH_ASSOC;
             }
@@ -456,9 +462,8 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 查询标量值/计算值
      * @param string $field 可选参数 数据表中字段，如果设值，将返回该字段标量，否则按select()方法设值的字段返回一行
-     * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function one($field = '', $isPrepare = false) {
+    public function one($field = '') {
         if (!empty($field)) {
             $select = $this->select;
             $this->select = [$field];
@@ -469,17 +474,13 @@ abstract class MySQLBase extends DaoBase {
         $this->offset = null;
         $this->sql = $this->build();
         $return = false;
-        if ($this->execute(true, $isPrepare, self::$retry)) {
-            if ($isPrepare) {
-                $return = true;
+        if ($this->execute(true, self::$retry)) {
+            if (!empty($field)) {
+                $return = $this->statement->fetchColumn(0);
             } else {
-                if (!empty($field)) {
-                    $return = $this->statement->fetchColumn(0);
-                } else {
-                    $return = $this->statement->fetch(PDO::FETCH_ASSOC);
-                }
-                $this->statement->closeCursor();
+                $return = $this->statement->fetch(PDO::FETCH_ASSOC);
             }
+            $this->statement->closeCursor();
         }
         $this->limit = $limit;
         $this->offset = $offset;
@@ -512,13 +513,13 @@ abstract class MySQLBase extends DaoBase {
             $this->sql .= $this->duplicateUpdate($names);
         }
         $this->bindValues($params);
-        $ret = $this->execute(false, false, self::$retry);
+        $ret = $this->execute(false, self::$retry);
         if ($ret) {
             return $this->resource->lastInsertId();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
             return $this->insert($data, $needUpdate);
         } else {
-            return false;
+            return null;
         }
     }
     
@@ -529,7 +530,7 @@ abstract class MySQLBase extends DaoBase {
      */
     public function batchInsert($datas, $needUpdate = false) {
         if (!is_array($datas) || !is_array(current($datas))) {
-            return false;
+            return null;
         }
         $values = [];
         $columns = null;
@@ -556,13 +557,13 @@ abstract class MySQLBase extends DaoBase {
         if ($needUpdate) {
             $this->sql .= $this->duplicateUpdate($columns);
         }
-        $ret = $this->execute(false, false, self::$retry);
+        $ret = $this->execute(false, self::$retry);
         if ($ret) {
             return $this->statement->rowCount();
         } else if ($this->errorCode == '42S02' && $this->createTable()) {
             return $this->batchInsert($datas, $needUpdate);
         } else {
-            return false;
+            return null;
         }
     }
     
@@ -571,9 +572,8 @@ abstract class MySQLBase extends DaoBase {
      * @param arrya $data 数组数据 ['name' => 'Sam1','age' => 30]
      * @param string|array $condition 参见 where()
      * @param array $params 索引参数占位符的查询参数数组
-     * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function update($data, $condition = '', $params = [], $isPrepare = false) {
+    public function update($data, $condition = '', $params = []) {
         $lines = [];
         $this->prepareData($data);
         foreach ($data as $name => $value) {
@@ -585,10 +585,7 @@ abstract class MySQLBase extends DaoBase {
         $where = $this->buildWhere($condition, $params);
         $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
         $this->bindValues($params);
-        $ret = $this->execute(false, $isPrepare, self::$retry);
-        if ($ret && $isPrepare) {
-            return true;
-        }
+        $ret = $this->execute(false, self::$retry);
         if ($ret) {
             return $this->statement->rowCount();
         } else {
@@ -600,17 +597,13 @@ abstract class MySQLBase extends DaoBase {
      * 删除并返回删除的行数
      * @param string|array $condition 参见 where()
      * @param array $params 索引参数占位符的查询参数数组
-     * @param boolean $isPrepare 是否调用execute执行SQL。true时生成prepare，后用bindParam|bindValue|bindValues绑定参数后在次调用执行。
      */
-    public function delete($condition = '', $params = [], $isPrepare = false) {
+    public function delete($condition = '', $params = []) {
         $sql = 'DELETE FROM ' . $this->tableName();
         $where = $this->buildWhere($condition, $params);
         $this->sql = $where === '' ? $sql : $sql . ' ' . $where;
         $this->bindValues($params);
-        $ret = $this->execute(false, $isPrepare, self::$retry);
-        if ($ret && $isPrepare) {
-            return true;
-        }
+        $ret = $this->execute(false, self::$retry);
         if ($ret) {
             return $this->statement->rowCount();
         } else {
@@ -630,27 +623,27 @@ abstract class MySQLBase extends DaoBase {
             } else {
                 $resource = $this->connection->getMaster();
             }
-            if (self::$debug) {
+            if ($this->logger->isDebugEnabled()) {
                 $startTime = microtime(true);
-                echo ("Debug: sql = {$sql}<br>\n");
+                $this->logger->debug("MySQL: sql = {$sql}");
             }
             $result = $forRead ? ($resource->query($sql)) : ($resource->exec($sql));
-            if (self::$debug) {
+            if ($this->logger->isDebugEnabled()) {
                 $cxcuteTime = microtime(true) - $startTime;
-                echo ('<font color=' . ($cxcuteTime > 1 ? 'red' : 'green') . '>ExcuteTime: ' . $cxcuteTime . "</font><hr>\n");
+                $this->logger->debug('<font color=' . ($cxcuteTime > 1 ? 'red' : 'green') . '>ExcuteTime: ' . $cxcuteTime . "</font>");
             }
             return $result;
         } catch (PDOException $e) {
-            if (self::$debug) {
-                echo '<b style="color:red;">', $e->getMessage(), "</b><br>\n";
+            if ($this->logger->isDebugEnabled()) {
+                $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
             }
             $this->errorCode = $e->getCode();
             $this->errorMsg = $e->getMessage();
             if ($this->connection->isTransaction()) {
                 throw $e;
             }
+            return null;
         }
-        return false;
     }
     
     /**
@@ -698,9 +691,9 @@ abstract class MySQLBase extends DaoBase {
         return false;
     }
     
-    private function execute($forRead, $isPrepare = false, $curreconn = 0) {
+    private function execute($forRead, $curreconn = 0) {
         if (!isset($this->sql) || empty($this->sql)) {
-            return false;
+            return null;
         }
         try {
             if (!$this->statement || $this->statement->queryString != $this->sql) {
@@ -716,32 +709,29 @@ abstract class MySQLBase extends DaoBase {
                 } else {
                     $this->resource = $this->connection->getMaster();
                 }
-                if (self::$debug) {
-                    echo ("Debug: sql = {$this->sql}<br>\n");
+                if ($this->logger->isDebugEnabled()) {
+                    $this->logger->debug("Debug: sql = {$this->sql}");
                     $startTime = microtime(true);
                 }
                 $this->statement = $this->resource->prepare($this->sql);
-                if (self::$debug) {
+                if ($this->logger->isDebugEnabled()) {
                     $bindTime = microtime(true) - $startTime;
-                    echo ('<font color="' . ($bindTime > 1 ? 'red' : 'green') . '">prepareTime: ' . $bindTime . "</font><br>\n");
+                    $this->logger->debug('<font color="' . ($bindTime > 1 ? 'red' : 'green') . '">prepareTime: ' . $bindTime . "</font>");
                 }
             }
-            if ($isPrepare) {
-                return true;
-            }
             $this->bindPendingParams();
-            if (self::$debug) {
+            if ($this->logger->isDebugEnabled()) {
                 $startTime = microtime(true);
             }
             $result = $this->statement->execute();
-            if (self::$debug) {
+            if ($this->logger->isDebugEnabled()) {
                 $cxcuteTime = microtime(true) - $startTime;
-                echo ('<font color="' . ($cxcuteTime > 1 ? 'red' : 'green') . '">ExcuteTime: ' . $cxcuteTime . "</font><br>\n");
+                $this->logger->debug('<font color="' . ($cxcuteTime > 1 ? 'red' : 'green') . '">ExcuteTime: ' . $cxcuteTime . "</font>");
             }
             return $result;
         } catch (PDOException $e) {
-            if (self::$debug) {
-                echo '<b style="color:red;">', $e->getMessage(), "</b><br>\n";
+            if ($this->logger->isDebugEnabled()) {
+                $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
             }
             $this->errorCode = $e->getCode();
             $this->errorMsg = $e->getMessage();
@@ -749,25 +739,22 @@ abstract class MySQLBase extends DaoBase {
                 throw $e;
             }
             if ($curreconn > 0 && $e->errorInfo[1] == 2006) {
-                if (self::$debug & self::DEBUG_RECONN) {
-                    echo '<font color=red>reconn:' . $curreconn . '</font>';
+                if ($this->logger->isDebugEnabled()) {
+                    $this->logger->debug('<font color=red>reconn:' . $curreconn . '</font>');
                 }
                 $curreconn--;
                 $this->connection->close();
-                return $this->execute($forRead, $isPrepare, $curreconn);
+                return $this->execute($forRead, $curreconn);
             }
+            return null;
         }
-        return false;
     }
     
     private function bindPendingParams() {
-        if (self::$debug & self::DEBUG_PARAM) {
-            echo '<dl style="margin:0px;">';
+        if ($this->logger->isTraceEnabled()) {
             foreach ($this->_pendingParams as $k => $v) {
-                echo '<dt style="float:left;margin-right:5px;font-weight:bold;">', $k, '</dt>';
-                echo '<dd>', $v[0], '</dd>';
+                $this->logger->trace($k.'=>'.$v[0]);
             }
-            echo '</dl>';
         }
         foreach ($this->_pendingParams as $name => $value) {
             $this->statement->bindValue($name, $value[0], $value[1]);

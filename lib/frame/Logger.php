@@ -11,7 +11,7 @@ class Logger {
     const FATAL = 32; // 严重错误
     
     private static $instance;
-    private static $level;
+    private static $level = 1024;
     
     public function setLevel($level) {
         self::$level = $level;
