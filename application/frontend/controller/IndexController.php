@@ -17,7 +17,7 @@ class IndexController extends CoreController implements BeanPrototype {
 
     public function indexAction() {
         Logger::getInstance()->setLevel(Logger::TRACE);
-        MySQLConnection::getInstance()->getResource(false);
+        MySQLConnection::getInstance()->getInstance()->getMaster();
         $this->assign('message', $this->demoSerivce->getMessage());
         return $this->displayTemplate();
     }

@@ -18,14 +18,23 @@ abstract class MySQLBase extends DaoBase {
     private $groupBy;
     private $join;
     private $having;
-    private $master; // 主库连接对象
-    private $slave; // 从库连接对象
+    private $connection;
     private $statement; // 当前预处理对象
     private $_pendingParams = [];
     private $sql;
     private $errorCode;
     private $errorMsg;
     private $isMaster = false;
+    
+    private function __clone() {}
+    
+    public function __construct() {
+        $this->init();
+    }
+    
+    public function init() {
+        
+    }
     
     /**
      * 数据库名称，返回空采用配置文件中的默认值

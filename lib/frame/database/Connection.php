@@ -7,23 +7,23 @@ use pwframe\lib\frame\Logger;
 
 abstract class Connection {
     
-    private $config;
+    private static $config;
     protected $logger;
     
-    public function __construct() {
+    protected function __construct() {
         $this->logger = Logger::getInstance();
     }
     
-    protected function loadConfig($dbType) {
-        if(null == $this->config) {
+    protected static function loadConfig($dbType) {
+        if(null == self::$config) {
             /**
              * @var Application $app
              */
             $app = WebApplicationContext::getInstance()->getBean(Application::class);
-            $this->config = require_once $app->getRootPath().$app->getConfigDirectory().DIRECTORY_SEPARATOR.'db.config.php';
+            self::$config = require_once $app->getRootPath().$app->getConfigDirectory().DIRECTORY_SEPARATOR.'db.config.php';
         }
-        if(null == $dbType) return $this->config;
-        if(isset($this->config[$dbType])) return $this->config[$dbType];
+        if(null == $dbType) return self::$config;
+        if(isset(self::$config[$dbType])) return self::$config[$dbType];
         return null;
     }
     
