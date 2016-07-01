@@ -473,7 +473,7 @@ abstract class MySQLBase extends DaoBase {
         $this->limit = 1;
         $this->offset = null;
         $this->sql = $this->build();
-        $return = false;
+        $return = null;
         if ($this->execute(true, self::$retry)) {
             if (!empty($field)) {
                 $return = $this->statement->fetchColumn(0);
@@ -612,7 +612,7 @@ abstract class MySQLBase extends DaoBase {
     }
     
     /**
-     * 执行一条 SQL 语句，insert|update|delete返回受影响的行数,select返回PDOStatement对象,失败的情况会返回 FALSE
+     * 执行一条 SQL 语句，insert|update|delete返回受影响的行数,select返回PDOStatement对象,失败的情况会返回 null
      * 不建议直接使用，需要自己处理参数安全转义
      */
     public function execSql($sql) {

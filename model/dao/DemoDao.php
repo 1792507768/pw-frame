@@ -20,7 +20,7 @@ class DemoDao extends MySQLBase implements BeanPrototype {
     }
 
     public function createTable() {
-        return $this->execSql(<<<ETO
+        return null !== $this->execSql(<<<ETO
 CREATE TABLE `{$this->tablePrefix()}demo` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `parent_id` int(11) NOT NULL DEFAULT '0',
