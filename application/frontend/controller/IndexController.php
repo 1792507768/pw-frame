@@ -20,7 +20,8 @@ class IndexController extends CoreController implements BeanPrototype {
     }
     
     public function newsAction() {
-        return ApiUtil::echoResult(0, 'news working!', intval($this->getParam('id')));
+        $args = array_filter($this->getParams(), 'addslashes');
+        return ApiUtil::echoResult(0, 'news working!', $args);
     }
     
     public function modifyAction() {

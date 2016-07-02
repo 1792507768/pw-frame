@@ -1,6 +1,9 @@
 <?php
 use pwframe\lib\frame\Router;
 
-Router::get('/news/{id}.shtml', function ($id) {
-    return Router::generateRoute('index', 'news', ['id' => $id]);
+Router::get('/news/{date}/{id}.shtml', function ($date, $id) {
+    return Router::generateRoute('index', 'news', [
+        'date' => $date,
+        'id' => $id
+    ]);
 });
