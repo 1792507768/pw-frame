@@ -1,8 +1,6 @@
 <?php
 namespace pwframe\lib\frame;
 
-use Exception;
-use ReflectionClass;
 use pwframe\lib\frame\ioc\WebApplicationContext;
 use pwframe\lib\frame\exception\ApplicationException;
 
@@ -11,6 +9,7 @@ class Application {
     private $autoloadExtension = '.php'; // 文件后缀
     private $rootNamespace = 'pwframe\\'; // 根命名空间
     private $webDirectory = 'web'; // Web目录
+    private $applicationDirectory = 'application'; // Application目录
     private $configDirectory = 'config'; // 配置文件目录
     private $appUri, $appUrl, $appPath, $rootPath;
     private $applicationConfig, $webApplicationContext;
@@ -25,6 +24,10 @@ class Application {
 
     public function getWebDirectory() {
         return $this->webDirectory;
+    }
+
+    public function getApplicationDirectory() {
+        return $this->applicationDirectory;
     }
 
     public function getConfigDirectory() {
@@ -99,65 +102,7 @@ class Application {
     }
     
     public function run() {
-        $route = Router::getInstance()->parse($this->appUri, $this->applicationConfig);
-        try {
-            if(null == $route) throw new Exception('uriError');
-            $this->processInvoke($route, null, 0);
-        } catch (Exception $e) {
-            $route['controller'] = $this->applicationConfig['defaultErrorController'];
-            $route['action'] = $this->applicationConfig['defaultErrorAction'];
-            try {
-                $this->processInvoke($route, $e, 0);
-            } catch (Exception $e1) {
-                $this->proessError($route, $e1, 1);
-            }
-        }
-    }
-    
-    private function processInvoke($route, $e, $count) {
-        $className = $this->rootNamespace.$this->applicationConfig['controllerNamePath']
-            .'\\'.$route['module']."\\controller".'\\'
-            .ucfirst($route['controller']).$this->applicationConfig['defaultControllerSuffix'];
-        $instance = $this->webApplicationContext->getBean($className);
-        $controller = new ReflectionClass($instance);
-        $instance->setAppUrl($this->appUrl);
-        $instance->setAppUri($this->appUri);
-        $instance->setAppPath($this->appPath);
-        $instance->setRootPath($this->rootPath);
-        $instance->setModuleName($route['module']);
-        $instance->setControllerName($route['controller']);
-        $instance->setActionName($route['action']);
-        $instance->setParams($_REQUEST);
-        $instance->setAssign(array());
-        $initVal = $instance->init();
-		if (null !== $initVal) {
-			$this->proessError($route, new Exception("initError"), $count);
-			return;
-		}
-		$action = $controller->getMethod($route['action'].$this->applicationConfig['defaultActionSuffix']);
-		if (null == $e) {
-		    $actionVal = $action->invoke($instance);
-		} else {
-		    $actionVal = $action->invoke($instance, $e);
-		}
-		$destroyVal = $instance->destroy($actionVal);
-		if (null != $destroyVal) {
-			$this->proessError($route, new Exception("destroyError"), $count);
-			return;
-		}
-    }
-    
-    private function proessError($route, $e, $count) {
-        if ($count > 0) {
-            throw new Exception('route:'.implode(',', $route), 0, $e);
-		}
-		$route['controller'] = $this->applicationConfig['defaultErrorController'];
-		$route['action'] = $this->applicationConfig['defaultErrorAction'];
-		try {
-			$this->processInvoke($route, $e, $count++);
-		} catch (Exception $e1) {
-			$this->proessError($route, new Exception("proessError"), $count++);
-		}
+        return Router::getInstance()->dispatch($this);
     }
     
 }
