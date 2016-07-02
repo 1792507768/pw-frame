@@ -19,6 +19,10 @@ class IndexController extends CoreController implements BeanPrototype {
         return $this->displayTemplate();
     }
     
+    public function newsAction() {
+        return ApiUtil::echoResult(0, 'news working!', intval($this->getParam('id')));
+    }
+    
     public function modifyAction() {
         $result = $this->demoSerivce->insert([
             'name' => 'Node'.time(),

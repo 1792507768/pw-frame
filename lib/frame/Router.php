@@ -26,40 +26,40 @@ class Router {
         self::$domains = $domains;
     }
     
-    public function get($uri, $action = null) {
-        return $this->addRoute(['GET', 'HEAD'], $uri, $action);
+    public static function get($uri, $action = null) {
+        return self::addRoute(['GET', 'HEAD'], $uri, $action);
     }
     
-    public function post($uri, $action = null) {
-        return $this->addRoute('POST', $uri, $action);
+    public static function post($uri, $action = null) {
+        return self::addRoute('POST', $uri, $action);
     }
     
-    public function put($uri, $action = null) {
-        return $this->addRoute('PUT', $uri, $action);
+    public static function put($uri, $action = null) {
+        return self::addRoute('PUT', $uri, $action);
     }
     
-    public function patch($uri, $action = null) {
-        return $this->addRoute('PATCH', $uri, $action);
+    public static function patch($uri, $action = null) {
+        return self::addRoute('PATCH', $uri, $action);
     }
     
-    public function delete($uri, $action = null) {
-        return $this->addRoute('DELETE', $uri, $action);
+    public static function delete($uri, $action = null) {
+        return self::addRoute('DELETE', $uri, $action);
     }
     
-    public function options($uri, $action = null) {
-        return $this->addRoute('OPTIONS', $uri, $action);
+    public static function options($uri, $action = null) {
+        return self::addRoute('OPTIONS', $uri, $action);
     }
     
-    public function any($uri, $action = null) {
+    public static function any($uri, $action = null) {
         $verbs = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'];
-        return $this->addRoute($verbs, $uri, $action);
+        return self::addRoute($verbs, $uri, $action);
     }
     
-    public function match($methods, $uri, $action = null) {
-        return $this->addRoute(array_map('strtoupper', (array) $methods), $uri, $action);
+    public static function match($methods, $uri, $action = null) {
+        return self::addRoute(array_map('strtoupper', (array) $methods), $uri, $action);
     }
     
-    protected function addRoute($methods, $uri, $action) {
+    protected static function addRoute($methods, $uri, $action) {
         if(is_scalar($methods)) $methods = [$methods];
         $route = [
             'methods' => $methods,
@@ -68,6 +68,14 @@ class Router {
         ];
         array_push(self::$routes, $route);
         return true;
+    }
+    
+    public static function generateRoute($controllerName, $actionName, $params = []) {
+        return [
+            'controller' => $controllerName,
+            'action' => $actionName,
+            'params' => $params
+        ];
     }
     
     public function parseModule($host) {
@@ -91,14 +99,6 @@ class Router {
             return call_user_func_array($route['action'], array_slice($matches, 1));
         }
         return null;
-    }
-    
-    public static function generateRoute($controllerName, $actionName, $params = []) {
-        return [
-            'controller' => $controllerName,
-            'action' => $actionName,
-            'params' => $params
-        ];
     }
     
     public function conventionRoute($uri, $config) {

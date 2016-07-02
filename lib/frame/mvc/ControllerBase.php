@@ -88,6 +88,12 @@ abstract class ControllerBase {
         return $actionVal;
     }
     
+    protected function getParam($key, $defaultValue = null) {
+        if(null === $key) return $this->params;
+        if(!isset($this->params[$key])) return $defaultValue;
+        return $this->params[$key];
+    }
+    
     /**
      * 设置视图中需要的参数
      */
