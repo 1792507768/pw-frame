@@ -160,7 +160,7 @@ class Router {
         $module = $this->parseModule($host);
         if(null == $module) return new ApplicationException('no module matches!');
         // 载入模块初始化文件
-        $filename = require_once $app->getRootPath().$app->getApplicationDirectory()
+        $filename = $app->getRootPath().$app->getApplicationDirectory()
             .DIRECTORY_SEPARATOR.$module.DIRECTORY_SEPARATOR.'init.php';
         if(file_exists($filename)) include_once $filename;
         // URI检测
