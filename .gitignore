@@ -2,3 +2,5 @@
 /.settings
 /.buildpath
 /code/web/.htaccess
+/code/vendor
+/code/composer.lock

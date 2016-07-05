@@ -6,6 +6,7 @@ use pwframe\lib\frame\exception\ApplicationException;
 
 class Application {
     
+    public static $useComposer = false; // 是否使用Composer
     private $autoloadExtension = '.php'; // 文件后缀
     private $rootNamespace = 'pwframe\\'; // 根命名空间
     private $webDirectory = 'web'; // Web目录
@@ -79,7 +80,11 @@ class Application {
             ini_set('display_errors', 'Off');
             error_reporting(0);
         }
-        spl_autoload_extensions($this->autoloadExtension);
+        if(self::$useComposer) {
+            require __DIR__.'/../../vendor/autoload.php';
+        } else {
+            spl_autoload_extensions($this->autoloadExtension);
+        }
         spl_autoload_register(array($this, 'autoload'));
         $this->applicationConfig = require_once $this->rootPath.$this->configDirectory.DIRECTORY_SEPARATOR.'application.config.php';
         $this->webApplicationContext = WebApplicationContext::getInstance();

@@ -1,0 +1,13 @@
+{
+    "name": "pw-frame",
+    "description": "The pw-frame Project.",
+    "keywords": ["pw-frame"],
+    "license": "Apache License",
+    "type": "project",
+    "require": {
+        "php": ">=5.5.9"
+    },
+    "require-dev": {
+        "phpoffice/phpexcel": "dev-develop"
+    }
+}
