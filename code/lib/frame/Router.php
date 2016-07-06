@@ -119,6 +119,7 @@ class Router {
     }
     
     private function invoke(Application $app, $module, $route, $arg = null) {
+        if(empty($route)) return new ApplicationException("no route matches!");
         $config = $app->getApplicationConfig();
         $webApplicationContext = WebApplicationContext::getInstance();
         $className = $app->getRootNamespace().$app->getApplicationDirectory().'\\'.$module."\\controller"
