@@ -118,7 +118,7 @@ class Router {
         return $route;
     }
     
-    private function invoke(Application $app, $module, $route, $args = null) {
+    private function invoke(Application $app, $module, $route, $arg = null) {
         $config = $app->getApplicationConfig();
         $webApplicationContext = WebApplicationContext::getInstance();
         $className = $app->getRootNamespace().$app->getApplicationDirectory().'\\'.$module."\\controller"
@@ -140,10 +140,10 @@ class Router {
             $initVal = $instance->init();
             if (null !== $initVal) return new ApplicationException('initError');
             $action = $controller->getMethod($route['action'].$config['defaultActionSuffix']);
-            if (null === $args) {
+            if (null === $arg) {
                 $actionVal = $action->invoke($instance);
             } else {
-                $actionVal = $action->invoke($instance, $args);
+                $actionVal = $action->invoke($instance, $arg);
             }
             $destroyVal = $instance->destroy($actionVal);
             if (null !== $destroyVal) return new ApplicationException('destroyError');
