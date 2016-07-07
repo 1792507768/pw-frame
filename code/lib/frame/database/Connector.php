@@ -5,7 +5,7 @@ use pwframe\lib\frame\ioc\WebApplicationContext;
 use pwframe\lib\frame\Application;
 use pwframe\lib\frame\Logger;
 
-abstract class Connection {
+abstract class Connector {
     
     private static $config;
     protected $logger;

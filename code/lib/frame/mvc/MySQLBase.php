@@ -5,7 +5,7 @@ use \PDOException;
 use \PDO;
 use \Exception;
 use pwframe\lib\frame\mvc\DaoBase;
-use pwframe\lib\frame\database\MySQLConnection;
+use pwframe\lib\frame\database\MySQLConnector;
 
 abstract class MySQLBase extends DaoBase {
     
@@ -22,7 +22,7 @@ abstract class MySQLBase extends DaoBase {
     private $groupBy;
     private $join;
     private $having;
-    private $connection;
+    private $connector;
     private $resource; // 当前连接资源
     private $statement; // 当前预处理对象
     private $_pendingParams = [];
@@ -39,8 +39,8 @@ abstract class MySQLBase extends DaoBase {
     }
     
     public function init() {
-        $this->connection = MySQLConnection::getInstance($this->dbName(), $this->charset());
-        if(null == $this->connection) throw Exception('MySQLConnection::getInstance failed!');
+        $this->connector = MySQLConnector::getInstance($this->dbName(), $this->charset());
+        if(null == $this->connector) throw Exception('MySQLConnector::getInstance failed!');
     }
     
     /**
@@ -61,7 +61,7 @@ abstract class MySQLBase extends DaoBase {
      * 数据库表前缀
      */
     protected function tablePrefix() {
-        return $this->connection->getTablePrefix();
+        return $this->connector->getTablePrefix();
     }
     
     /**
@@ -619,9 +619,9 @@ abstract class MySQLBase extends DaoBase {
         try {
             $forRead = $this->isReadQuery($sql);
             if (!$this->isMaster && $forRead) {
-                $resource = $this->connection->getSlave();
+                $resource = $this->connector->getSlave();
             } else {
-                $resource = $this->connection->getMaster();
+                $resource = $this->connector->getMaster();
             }
             if ($this->logger->isDebugEnabled()) {
                 $startTime = microtime(true);
@@ -639,7 +639,7 @@ abstract class MySQLBase extends DaoBase {
             }
             $this->errorCode = $e->getCode();
             $this->errorMsg = $e->getMessage();
-            if ($this->connection->isTransaction()) {
+            if ($this->connector->isTransaction()) {
                 throw $e;
             }
             return null;
@@ -672,15 +672,15 @@ abstract class MySQLBase extends DaoBase {
     }
     
     public function beginTransaction() {
-        $this->connection->beginTransaction();
+        $this->connector->beginTransaction();
     }
     
     public function commit() {
-        $this->connection->commit();
+        $this->connector->commit();
     }
     
     public function rollBack() {
-        $this->connection->rollBack();
+        $this->connector->rollBack();
     }
     
     /**
@@ -701,13 +701,13 @@ abstract class MySQLBase extends DaoBase {
                     $this->statement->closeCursor();
                     $this->statement = null;
                 }
-                if ($this->isMaster || $this->connection->isTransaction()) {
+                if ($this->isMaster || $this->connector->isTransaction()) {
                     $forRead = false;
                 }
                 if ($forRead) {
-                    $this->resource = $this->connection->getSlave();
+                    $this->resource = $this->connector->getSlave();
                 } else {
-                    $this->resource = $this->connection->getMaster();
+                    $this->resource = $this->connector->getMaster();
                 }
                 if ($this->logger->isDebugEnabled()) {
                     $this->logger->debug("Debug: sql = {$this->sql}");
@@ -735,7 +735,7 @@ abstract class MySQLBase extends DaoBase {
             }
             $this->errorCode = $e->getCode();
             $this->errorMsg = $e->getMessage();
-            if ($this->connection->isTransaction()) {
+            if ($this->connector->isTransaction()) {
                 throw $e;
             }
             if ($curreconn > 0 && $e->errorInfo[1] == 2006) {
@@ -743,7 +743,7 @@ abstract class MySQLBase extends DaoBase {
                     $this->logger->debug('<font color=red>reconn:' . $curreconn . '</font>');
                 }
                 $curreconn--;
-                $this->connection->close();
+                $this->connector->close();
                 return $this->execute($forRead, $curreconn);
             }
             return null;
@@ -1117,7 +1117,7 @@ abstract class MySQLBase extends DaoBase {
             return $str;
         }
         if (!$this->resource) {
-            $this->resource = $this->connection->getSlave();
+            $this->resource = $this->connector->getSlave();
         }
         if (($value = $this->resource->quote($str)) !== false) {
             return $value;

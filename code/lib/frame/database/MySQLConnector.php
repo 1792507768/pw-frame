@@ -4,7 +4,7 @@ namespace pwframe\lib\frame\database;
 use \PDO;
 use \PDOException;
 
-class MySQLConnection extends Connection {
+class MySQLConnector extends Connector {
     
     private $username;
     private $password;
@@ -19,7 +19,7 @@ class MySQLConnection extends Connection {
     private $masterResource;
     private $slaveResource;
     private $transactionLevel = 0;
-    private static $connectionArray = array();
+    private static $connectorArray = array();
     
     public function getTablePrefix() {
         return $this->tablePrefix;
@@ -50,10 +50,10 @@ class MySQLConnection extends Connection {
         if(!empty($dbName)) $config['dbname'] = $dbName;
         if(!empty($charset)) $config['charset'] = $dbName;
         $key = '___'.$config['dbname'].'___'.$config['charset'].'___';
-        if(!isset(self::$connectionArray[$key])) {
-            self::$connectionArray[$key] = new self($config);
+        if(!isset(self::$connectorArray[$key])) {
+            self::$connectorArray[$key] = new self($config);
         }
-        return self::$connectionArray[$key];
+        return self::$connectorArray[$key];
     }
     
     private function getResource($isMaster) {
@@ -90,7 +90,7 @@ class MySQLConnection extends Connection {
     
     public function getMaster() {
         if($this->logger->isDebugEnabled()) {
-            $this->logger->debug('MySQLConnection - [master]'.(isset($this->masterResource) ? 'hit' : 'create')
+            $this->logger->debug('MySQLConnector - [master]'.(isset($this->masterResource) ? 'hit' : 'create')
                 .':'.'{host:'.$this->masterHost.';port:'.$this->masterProt.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
         }
         if(!isset($this->masterResource)) {
@@ -101,7 +101,7 @@ class MySQLConnection extends Connection {
     
     public function getSlave() {
         if($this->logger->isDebugEnabled()) {
-            $this->logger->debug('MySQLConnection - [slave]'.(isset($this->slaveResource) ? 'hit' : 'create')
+            $this->logger->debug('MySQLConnector - [slave]'.(isset($this->slaveResource) ? 'hit' : 'create')
                 .':'.'{host:'.$this->slaveHost.';port:'.$this->slavePort.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
         }
         if(!isset($this->slaveResource)) {
