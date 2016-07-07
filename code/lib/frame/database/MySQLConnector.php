@@ -12,7 +12,7 @@ class MySQLConnector extends Connector {
     private $charset;
     private $tablePrefix;
     private $masterHost;
-    private $masterProt;
+    private $masterPort;
     private $slaveHost;
     private $slavePort;
     private $options = null;
@@ -34,7 +34,7 @@ class MySQLConnector extends Connector {
         $this->tablePrefix = $config['tablePrefix'];
         $master = $config['master'];
         $this->masterHost = $master['host'];
-        $this->masterProt = $master['port'];
+        $this->masterPort = $master['port'];
         if(empty($config['slaves'])) {
             $slave = $config['master'];
         } else {
@@ -58,7 +58,7 @@ class MySQLConnector extends Connector {
     
     private function getResource($isMaster) {
         if ($isMaster) {
-            $dsn = "mysql:host={$this->masterHost};port={$this->masterProt};dbname={$this->dbname}";
+            $dsn = "mysql:host={$this->masterHost};port={$this->masterPort};dbname={$this->dbname}";
         } else {
             $dsn = "mysql:host={$this->slaveHost};port={$this->slavePort};dbname={$this->dbname}";
         }
@@ -91,7 +91,7 @@ class MySQLConnector extends Connector {
     public function getMaster() {
         if($this->logger->isDebugEnabled()) {
             $this->logger->debug('MySQLConnector - [master]'.(isset($this->masterResource) ? 'hit' : 'create')
-                .':'.'{host:'.$this->masterHost.';port:'.$this->masterProt.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
+                .':'.'{host:'.$this->masterHost.';port:'.$this->masterPort.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
         }
         if(!isset($this->masterResource)) {
             $this->masterResource = $this->getResource(true);
