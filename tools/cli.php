@@ -93,13 +93,14 @@ class CliUtil {
     
     public static function printMessage($message, $isBreak = true) {
         echo $message;
-        if($isBreak) echo "\r\n";
+        if($isBreak) echo PHP_EOL;
     }
     
 }
 $projectDir = dirname(dirname(__FILE__));
 define('DS', DIRECTORY_SEPARATOR);
 CliUtil::printMessage('--------------------------------------------------------');
+if(!isset($argv[1])) $argv[1] = 'help';
 switch ($argv[1]) {
     case 'eclipse' :
         $result = CliUtil::copydir($projectDir.DS.'tools'.DS.'eclipse', $projectDir, function ($fileName) {
