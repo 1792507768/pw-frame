@@ -1,10 +1,12 @@
 <?php
 namespace pwframe\lib\frame\mvc;
 
+use pwframe\lib\frame\Session;
 abstract class ControllerBase {
     
     protected $appUri, $appUrl, $appPath, $rootPath;
     protected $moduleName, $controllerName, $actionName;
+    protected $session; // 当前Session对象
     protected $params; // 请求参数
     protected $assign; // 视图数据Map对象
 
@@ -38,6 +40,17 @@ abstract class ControllerBase {
 
     public function getActionName() {
         return $this->actionName;
+    }
+
+    public function setSession(Session $session) {
+        $this->session = $session;
+    }
+    
+    /**
+     * @return Session
+     */
+    public function getSession() {
+        return $this->session;
     }
 
     public function getParams() {

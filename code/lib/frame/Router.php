@@ -6,6 +6,7 @@ use \Exception;
 use \ReflectionClass;
 use pwframe\lib\frame\exception\ApplicationException;
 use pwframe\lib\frame\ioc\WebApplicationContext;
+use pwframe\lib\frame\mvc\ControllerBase;
 
 class Router {
     
@@ -124,6 +125,9 @@ class Router {
         $webApplicationContext = WebApplicationContext::getInstance();
         $className = $app->getRootNamespace().$app->getApplicationDirectory().'\\'.$module."\\controller"
             .'\\'.ucfirst($route['controller']).$config['defaultControllerSuffix'];
+        /**
+         * @var ControllerBase $instance
+         */
         $instance = $webApplicationContext->getBean($className);
         try {
             $controller = new ReflectionClass($instance);
@@ -134,6 +138,7 @@ class Router {
             $instance->setModuleName($module);
             $instance->setControllerName($route['controller']);
             $instance->setActionName($route['action']);
+            $instance->setSession($app->session);
             if(!is_array($route['params'])) $route['params'] = [];
             $route['params'] = array_merge($_REQUEST, $route['params']);
             $instance->setParams($route['params']);
