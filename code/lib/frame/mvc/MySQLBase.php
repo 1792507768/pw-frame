@@ -35,10 +35,10 @@ abstract class MySQLBase extends DaoBase {
     
     public function __construct() {
         parent::__construct();
-        $this->init();
+        $this->reload();
     }
     
-    public function init() {
+    public function reload() {
         $this->connector = MySQLConnector::getInstance($this->dbName(), $this->charset());
         if(null == $this->connector) throw Exception('MySQLConnector::getInstance failed!');
     }
@@ -67,12 +67,12 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 数据库表名称
      */
-    abstract public function tableName();
+    public abstract function tableName();
     
     /**
      * 表字段数组
      */
-    abstract public function collumnNames();
+    public abstract function collumnNames();
     
     /**
      * 预处理表数据
@@ -679,8 +679,8 @@ abstract class MySQLBase extends DaoBase {
         $this->connector->commit();
     }
     
-    public function rollBack() {
-        $this->connector->rollBack();
+    public function rollback() {
+        $this->connector->rollback();
     }
     
     /**

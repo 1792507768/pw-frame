@@ -4,11 +4,18 @@ namespace pwframe\lib\frame\database;
 use \PDO;
 use \PDOException;
 
+/**
+ * MySQL主从连接管理类
+ * 若多个DAO使用同一个实例，仅在最后一次执行commit/rollback的时候，事务才生效。
+ * 开发者需要自行判断多个DAO是否使用同一个实例，用来处理事务的最终状态。
+ * @author Ouyang <iisquare@163.com>
+ *
+ */
 class MySQLConnector extends Connector {
     
     private $username;
     private $password;
-    private $dbname;
+    private $dbName;
     private $charset;
     private $tablePrefix;
     private $masterHost;
@@ -29,7 +36,7 @@ class MySQLConnector extends Connector {
         parent::__construct();
         $this->username = $config['username'];
         $this->password = $config['password'];
-        $this->dbname = $config['dbname'];
+        $this->dbName = $config['dbname'];
         $this->charset = $config['charset'];
         $this->tablePrefix = $config['tablePrefix'];
         $master = $config['master'];
@@ -58,9 +65,9 @@ class MySQLConnector extends Connector {
     
     private function getResource($isMaster) {
         if ($isMaster) {
-            $dsn = "mysql:host={$this->masterHost};port={$this->masterPort};dbname={$this->dbname}";
+            $dsn = "mysql:host={$this->masterHost};port={$this->masterPort};dbname={$this->dbName}";
         } else {
-            $dsn = "mysql:host={$this->slaveHost};port={$this->slavePort};dbname={$this->dbname}";
+            $dsn = "mysql:host={$this->slaveHost};port={$this->slavePort};dbname={$this->dbName}";
         }
         if (!empty($this->charset)) $dsn .= ';charset='.$this->charset;
         if(empty($this->options)) {
@@ -91,7 +98,7 @@ class MySQLConnector extends Connector {
     public function getMaster() {
         if($this->logger->isDebugEnabled()) {
             $this->logger->debug('MySQLConnector - [master]'.(isset($this->masterResource) ? 'hit' : 'create')
-                .':'.'{host:'.$this->masterHost.';port:'.$this->masterPort.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
+                .':'.'{host:'.$this->masterHost.';port:'.$this->masterPort.';dbname:'.$this->dbName.';dbuser:'.$this->username.'}');
         }
         if(!isset($this->masterResource)) {
             $this->masterResource = $this->getResource(true);
@@ -102,7 +109,7 @@ class MySQLConnector extends Connector {
     public function getSlave() {
         if($this->logger->isDebugEnabled()) {
             $this->logger->debug('MySQLConnector - [slave]'.(isset($this->slaveResource) ? 'hit' : 'create')
-                .':'.'{host:'.$this->slaveHost.';port:'.$this->slavePort.';dbname:'.$this->dbname.';dbuser:'.$this->username.'}');
+                .':'.'{host:'.$this->slaveHost.';port:'.$this->slavePort.';dbname:'.$this->dbName.';dbuser:'.$this->username.'}');
         }
         if(!isset($this->slaveResource)) {
             $this->slaveResource = $this->getResource(false);
@@ -137,9 +144,10 @@ class MySQLConnector extends Connector {
         if ($this->transactionLevel === 0) {
             return $this->getMaster()->commit();
         }
+        return true;
     }
     
-    public function rollBack() {
+    public function rollback() {
         if (!$this->isTransaction()) {
             return false;
         }
@@ -150,6 +158,7 @@ class MySQLConnector extends Connector {
             }
             return $this->getMaster()->rollBack();
         }
+        return true;
     }
     
     public function __destruct() {
