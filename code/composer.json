@@ -9,5 +9,8 @@
     },
     "require-dev": {
         "phpoffice/phpexcel": "dev-develop"
+    },
+    "scripts" : {
+        "tools" : "php -f ../tools/cli.php"
     }
 }
