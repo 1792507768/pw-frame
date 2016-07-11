@@ -72,13 +72,13 @@ abstract class MySQLBase extends DaoBase {
     /**
      * 表字段数组
      */
-    public abstract function collumnNames();
+    public abstract function columns();
     
     /**
      * 预处理表数据
      */
     public function prepareData($data) {
-        $collumns = $this->collumnNames();
+        $collumns = $this->columns();
         foreach ($data as $name => $value) {
             if (!key_exists($name, $collumns)) {
                 unset($data[$name]);

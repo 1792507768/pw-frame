@@ -10,7 +10,7 @@ class DemoDao extends MySQLBase implements BeanPrototype {
         return $this->tablePrefix().'demo';
     }
     
-    public function collumnNames() {
+    public function columns() {
         return [
             'id' => [], // 主键
             'parent_id' => [], // 父级
