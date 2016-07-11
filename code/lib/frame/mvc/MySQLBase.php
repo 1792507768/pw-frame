@@ -27,8 +27,7 @@ abstract class MySQLBase extends DaoBase {
     private $statement; // 当前预处理对象
     private $_pendingParams = [];
     private $sql;
-    private $errorCode;
-    private $errorMsg;
+    private $exception;
     private $isMaster = false;
     
     private function __clone() {}
@@ -112,10 +111,10 @@ abstract class MySQLBase extends DaoBase {
     }
     
     /**
-     * 最后一次执行的错误，执行成功时不会修改该返回值
+     * 最后一次执行的异常，执行成功时不会修改该返回值
      */
-    public function getLastError() {
-        return $this->errorMsg;
+    public function getLastException() {
+        return $this->exception;
     }
     
     /**
@@ -516,7 +515,7 @@ abstract class MySQLBase extends DaoBase {
         $ret = $this->execute(false, self::$retry);
         if ($ret) {
             return $this->resource->lastInsertId();
-        } else if ($this->errorCode == '42S02' && $this->createTable()) {
+        } else if (null != $this->exception && '42S02' == $this->exception->getCode() && $this->createTable()) {
             return $this->insert($data, $needUpdate);
         } else {
             return null;
@@ -560,7 +559,7 @@ abstract class MySQLBase extends DaoBase {
         $ret = $this->execute(false, self::$retry);
         if ($ret) {
             return $this->statement->rowCount();
-        } else if ($this->errorCode == '42S02' && $this->createTable()) {
+        } else if (null != $this->exception && '42S02' == $this->exception->getCode()  && $this->createTable()) {
             return $this->batchInsert($datas, $needUpdate);
         } else {
             return null;
@@ -634,14 +633,11 @@ abstract class MySQLBase extends DaoBase {
             }
             return $result;
         } catch (PDOException $e) {
+            $this->exception = $e;
             if ($this->logger->isDebugEnabled()) {
                 $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
             }
-            $this->errorCode = $e->getCode();
-            $this->errorMsg = $e->getMessage();
-            if ($this->connector->isTransaction()) {
-                throw $e;
-            }
+            if ($this->connector->isTransaction()) throw $e;
             return null;
         }
     }
@@ -730,14 +726,11 @@ abstract class MySQLBase extends DaoBase {
             }
             return $result;
         } catch (PDOException $e) {
+            $this->exception = $e;
             if ($this->logger->isDebugEnabled()) {
                 $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
             }
-            $this->errorCode = $e->getCode();
-            $this->errorMsg = $e->getMessage();
-            if ($this->connector->isTransaction()) {
-                throw $e;
-            }
+            if ($this->connector->isTransaction()) throw $e;
             if ($curreconn > 0 && $e->errorInfo[1] == 2006) {
                 if ($this->logger->isDebugEnabled()) {
                     $this->logger->debug('<font color=red>reconn:' . $curreconn . '</font>');
