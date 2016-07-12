@@ -252,6 +252,7 @@ abstract class MySQLBase extends DaoBase {
      * @param array $params 可选参数，与连接条件绑定的参数。
      */
     public function innerJoin($table, $on = '', $params = []) {
+        if(null === $this->join) $this->join = [];
         $this->join[] = ['INNER JOIN', $table, $on];
         return $this->bindValues($params);
     }
@@ -260,6 +261,7 @@ abstract class MySQLBase extends DaoBase {
      * @see innerJoin()
      */
     public function leftJoin($table, $on = '', $params = []) {
+        if(null === $this->join) $this->join = [];
         $this->join[] = ['LEFT JOIN', $table, $on];
         return $this->bindValues($params);
     }
@@ -268,6 +270,7 @@ abstract class MySQLBase extends DaoBase {
      * @see innerJoin()
      */
     public function rightJoin($table, $on = '', $params = []) {
+        if(null === $this->join) $this->join = [];
         $this->join[] = ['RIGHT JOIN', $table, $on];
         return $this->bindValues($params);
     }
@@ -687,10 +690,8 @@ abstract class MySQLBase extends DaoBase {
         return false;
     }
     
-    private function execute($forRead, $curreconn = 0) {
-        if (!isset($this->sql) || empty($this->sql)) {
-            return null;
-        }
+    private function execute($forRead, $retry = 0) {
+        if (!isset($this->sql) || empty($this->sql)) return false;
         try {
             if (!$this->statement || $this->statement->queryString != $this->sql) {
                 if ($this->statement) {
@@ -731,15 +732,14 @@ abstract class MySQLBase extends DaoBase {
                 $this->logger->debug('<b style="color:red;">'.$e->getMessage()."</b>");
             }
             if ($this->connector->isTransaction()) throw $e;
-            if ($curreconn > 0 && $e->errorInfo[1] == 2006) {
+            if ($retry > 0 && $e->errorInfo[1] == 2006) {
                 if ($this->logger->isDebugEnabled()) {
-                    $this->logger->debug('<font color=red>reconn:' . $curreconn . '</font>');
+                    $this->logger->debug('<font color=red>reconn:' . $retry . '</font>');
                 }
-                $curreconn--;
                 $this->connector->close();
-                return $this->execute($forRead, $curreconn);
+                return $this->execute($forRead, --$retry);
             }
-            return null;
+            return false;
         }
     }
     
