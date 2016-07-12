@@ -671,15 +671,15 @@ abstract class MySQLBase extends DaoBase {
     }
     
     public function beginTransaction() {
-        $this->connector->beginTransaction();
+        return $this->connector->beginTransaction();
     }
     
     public function commit() {
-        $this->connector->commit();
+        return $this->connector->commit();
     }
     
     public function rollback() {
-        $this->connector->rollback();
+        return $this->connector->rollback();
     }
     
     /**
