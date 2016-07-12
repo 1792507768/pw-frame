@@ -25,7 +25,7 @@ abstract class MySQLBase extends DaoBase {
     private $connector;
     private $resource; // 当前连接资源
     private $statement; // 当前预处理对象
-    private $_pendingParams = [];
+    private $pendingParams = [];
     private $sql;
     private $exception;
     private $isMaster = false;
@@ -333,7 +333,7 @@ abstract class MySQLBase extends DaoBase {
         if ($dataType === null) {
             $dataType = $this->getPdoType($value);
         }
-        $this->_pendingParams[$name] = [$value, $dataType];
+        $this->pendingParams[$name] = [$value, $dataType];
         return $this;
     }
     
@@ -347,10 +347,10 @@ abstract class MySQLBase extends DaoBase {
         }
         foreach ($values as $name => $value) {
             if (is_array($value)) {
-                $this->_pendingParams[$name] = $value;
+                $this->pendingParams[$name] = $value;
             } else {
                 $type = $this->getPdoType($value);
-                $this->_pendingParams[$name] = [$value, $type];
+                $this->pendingParams[$name] = [$value, $type];
             }
         }
         return $this;
@@ -647,7 +647,7 @@ abstract class MySQLBase extends DaoBase {
      */
     public function reset() {
         $this->statement = null;
-        $this->_pendingParams = [];
+        $this->pendingParams = [];
         $this->select = null;
         $this->where = null;
         $this->limit = null;
@@ -663,7 +663,7 @@ abstract class MySQLBase extends DaoBase {
      * 清除已绑定的查询参数数组
      */
     public function cancelBindValues() {
-        $this->_pendingParams = [];
+        $this->pendingParams = [];
         return $this;
     }
     
@@ -745,14 +745,14 @@ abstract class MySQLBase extends DaoBase {
     
     private function bindPendingParams() {
         if ($this->logger->isTraceEnabled()) {
-            foreach ($this->_pendingParams as $k => $v) {
+            foreach ($this->pendingParams as $k => $v) {
                 $this->logger->trace($k.'=>'.$v[0]);
             }
         }
-        foreach ($this->_pendingParams as $name => $value) {
+        foreach ($this->pendingParams as $name => $value) {
             $this->statement->bindValue($name, $value[0], $value[1]);
         }
-        $this->_pendingParams = [];
+        $this->pendingParams = [];
     }
     
     private function build() {
