@@ -905,15 +905,20 @@ abstract class MySQLBase extends DaoBase {
     private function buildHashCondition($condition, &$params) {
         $parts = [];
         foreach ($condition as $column => $value) {
-            if (strpos($column, '(') === false) {
-                $column = $this->quoteColumnName($column);
-            }
-            if ($value === null) {
-                $parts[] = "$column IS NULL";
+            if(is_array($value)) {
+                // IN condition
+                $parts[] = $this->buildInCondition('IN', [$column, $value], $params);
             } else {
-                $phName = self::PARAM_PREFIX . count($params);
-                $parts[] = "$column=$phName";
-                $params[$phName] = $value;
+                if (strpos($column, '(') === false) {
+                    $column = $this->quoteColumnName($column);
+                }
+                if ($value === null) {
+                    $parts[] = "$column IS NULL";
+                } else {
+                    $phName = self::PARAM_PREFIX . count($params);
+                    $parts[] = "$column=$phName";
+                    $params[$phName] = $value;
+                }
             }
         }
         return count($parts) === 1 ? $parts[0] : '(' . implode(') AND (', $parts) . ')';
