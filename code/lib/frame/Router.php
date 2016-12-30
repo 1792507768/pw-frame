@@ -138,7 +138,6 @@ class Router {
             $instance->setModuleName($module);
             $instance->setControllerName($route['controller']);
             $instance->setActionName($route['action']);
-            $instance->setSession($app->session);
             if(!is_array($route['params'])) $route['params'] = [];
             $route['params'] = array_merge($_REQUEST, $route['params']);
             $instance->setParams($route['params']);

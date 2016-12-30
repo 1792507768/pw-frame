@@ -58,4 +58,9 @@ class Session {
         $_SESSION = $this->sessionArray;
         session_write_close();
     }
+    
+    public function __destruct() {
+        $this->save(); // 在请求结束时统一写入Session，尽量避免长时间持有资源
+    }
+    
 }

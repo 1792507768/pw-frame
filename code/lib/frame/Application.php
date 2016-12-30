@@ -14,7 +14,6 @@ class Application {
     private $configDirectory = 'config'; // 配置文件目录
     private $appUri, $appUrl, $appPath, $rootPath;
     private $applicationConfig, $webApplicationContext;
-    public $session; // Session对象
     
     public function getAutoloadExtension(){
         return $this->autoloadExtension;
@@ -87,21 +86,14 @@ class Application {
             spl_autoload_extensions($this->autoloadExtension);
         }
         spl_autoload_register([$this, 'autoload']);
-        register_shutdown_function([$this, 'shutdown']);
         $this->applicationConfig = require_once $this->rootPath.$this->configDirectory.DIRECTORY_SEPARATOR.'application.config.php';
         $this->webApplicationContext = WebApplicationContext::getInstance();
-        $this->webApplicationContext->setBean(self::class, function () {
+        $this->webApplicationContext->setBean(self::class, function () { // WebApplicationContext对象
             return $this;
         });
-        $this->session = Session::getInstance();
-        $this->webApplicationContext->setBean(Session::class, function () {
-            return $this->session;
+        $this->webApplicationContext->setBean(Session::class, function () { // Session对象
+            return Session::getInstance();
         });
-    }
-    
-    public function shutdown() {
-        // 在请求结束时统一写入Session，尽量避免长时间持有资源
-        if(null !== $this->session) $this->session->save();
     }
     
     public function autoload($className) {
