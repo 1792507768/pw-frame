@@ -20,13 +20,13 @@ class Session {
      * @param string $key 为null时返回全部
      */
     public function get($key = null) {
-        if(null === $this->sessionArray) {
+        if(null === $_SESSION) {
             session_start();
             $this->sessionArray = $_SESSION;
             session_write_close();
         }
-        if(null === $key) return $this->sessionArray;
-        if(isset($this->sessionArray[$key])) return $this->sessionArray[$key];
+        if(null === $key) return $_SESSION;
+        if(isset($_SESSION[$key])) return $_SESSION[$key];
         return null;
     }
     
@@ -37,9 +37,9 @@ class Session {
      */
     public function set($key, $value = null) {
         if(null === $value) {
-            unset($this->sessionArray[$key]);
+            unset($_SESSION[$key]);
         } else {
-            $this->sessionArray[$key] = $value;
+            $_SESSION[$key] = $value;
         }
     }
     
@@ -49,13 +49,13 @@ class Session {
      */
     public function save(array $data = null) {
         if(null !== $data) {
-            $this->sessionArray = $data;
+            $_SESSION = $data;
         }
-        if(null === $this->sessionArray || $this->sessionArray == $_SESSION) {
+        if(null === $_SESSION || $this->sessionArray == $_SESSION) {
             return ; // 没调用过Session或Session没有更改
         }
         session_start();
-        $_SESSION = $this->sessionArray;
+        $this->sessionArray = $_SESSION;
         session_write_close();
     }
     
