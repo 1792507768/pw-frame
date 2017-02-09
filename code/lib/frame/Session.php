@@ -15,16 +15,18 @@ class Session {
         return self::$instance;
     }
     
+    public function reset() {
+        session_start();
+        $this->sessionArray = $_SESSION;
+        session_write_close();
+    }
+    
     /**
      * 获取Session值，仅当调用时再打开Session
      * @param string $key 为null时返回全部
      */
     public function get($key = null) {
-        if(null === $_SESSION) {
-            session_start();
-            $this->sessionArray = $_SESSION;
-            session_write_close();
-        }
+        if(null === $_SESSION) $this->reset();
         if(null === $key) return $_SESSION;
         if(isset($_SESSION[$key])) return $_SESSION[$key];
         return null;
@@ -36,6 +38,7 @@ class Session {
      * @param mixed $value 若为null则删除当前Key
      */
     public function set($key, $value = null) {
+        if(null === $_SESSION) $this->reset();
         if(null === $value) {
             unset($_SESSION[$key]);
         } else {
@@ -54,8 +57,9 @@ class Session {
         if(null === $_SESSION || $this->sessionArray == $_SESSION) {
             return ; // 没调用过Session或Session没有更改
         }
-        session_start();
         $this->sessionArray = $_SESSION;
+        session_start();
+        $_SESSION = $this->sessionArray;
         session_write_close();
     }
     
