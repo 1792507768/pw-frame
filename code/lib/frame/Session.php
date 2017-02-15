@@ -39,7 +39,9 @@ class Session {
      */
     public function set($key, $value = null) {
         if(null === $_SESSION) $this->reset();
-        if(null === $value) {
+        if(is_array($key)) {
+            $_SESSION = $key;
+        } else if (null === $value) {
             unset($_SESSION[$key]);
         } else {
             $_SESSION[$key] = $value;
