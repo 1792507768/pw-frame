@@ -7,18 +7,17 @@ use pwframe\model\dao\DemoDao;
 
 class DemoService extends ServiceBase implements BeanSingleton {
     
-    private $demoDao;
-    
-    public function __construct(DemoDao $demoDao) {
-        $this->demoDao = $demoDao;
+    public function __construct() {
     }
     
     public function insert($data) {
-        return $this->demoDao->insert($data);
+        $demoDao = new DemoDao();
+        return $demoDao->insert($data);
     }
     
     public function getList() {
-        return $this->demoDao->where(['status' => 1])->orderBy('id desc')->limit(30)->all();
+        $demoDao = new DemoDao();
+        return $demoDao->where(['status' => 1])->orderBy('id desc')->limit(30)->all();
     }
     
     public function getMessage() {
