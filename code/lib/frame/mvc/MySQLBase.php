@@ -6,8 +6,9 @@ use \PDO;
 use \Exception;
 use pwframe\lib\frame\mvc\DaoBase;
 use pwframe\lib\frame\database\MySQLConnector;
+use pwframe\lib\frame\ioc\BeanPrototype;
 
-abstract class MySQLBase extends DaoBase {
+abstract class MySQLBase extends DaoBase implements BeanPrototype {
     
     const PARAM_PREFIX = ':qp';
     
